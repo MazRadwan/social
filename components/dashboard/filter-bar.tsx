@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { FilterOptions } from '@/lib/data/types'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { format, parseISO } from 'date-fns'
 
 interface FilterBarProps {
   onFilterChange: (filters: FilterOptions) => void
@@ -157,34 +158,195 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     onFilterChange(newFilters);
   }
 
-  return (
-    <div className="bg-card border rounded-lg p-3 sm:p-4 md:p-6 w-full">
-      <div className="space-y-3 sm:space-y-4 md:space-y-6">
-        {/* Date Range Picker */}
-        <DateRangePicker 
-          dateRange={date}
-          onDateRangeChange={handleDateChange}
-        />
+  const handleQuickDateSelect = (days: number | null) => {
+    const currentDate = new Date();
+    let newDate: DateRange | undefined;
 
-        {/* Other Filters */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    if (days === null) {
+      newDate = { from: new Date(2000, 0, 1), to: new Date() };
+    } else {
+      const newFromDate = new Date(currentDate);
+      newFromDate.setDate(currentDate.getDate() - days);
+      newDate = { from: newFromDate, to: currentDate };
+    }
+
+    handleDateChange(newDate);
+  };
+
+  const isLastXDays = (dateRange: DateRange | undefined, days: number) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return false;
+    
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    const fromDate = new Date(dateRange.from);
+    const toDate = new Date(dateRange.to);
+    
+    // Check if "to" date is today (or within 1 day)
+    const isToDateToday = Math.abs(toDate.getTime() - today.getTime()) < (24 * 60 * 60 * 1000);
+    
+    // Calculate expected "from" date
+    const expectedFromDate = new Date(today);
+    expectedFromDate.setDate(today.getDate() - days);
+    expectedFromDate.setHours(0, 0, 0, 0);
+    
+    // Allow 1 day tolerance for the from date
+    const isFromDateCorrect = Math.abs(fromDate.getTime() - expectedFromDate.getTime()) < (24 * 60 * 60 * 1000);
+    
+    return isToDateToday && isFromDateCorrect;
+  };
+
+  const isLastYear = (dateRange: DateRange | undefined) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return false;
+    
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    const fromDate = new Date(dateRange.from);
+    const toDate = new Date(dateRange.to);
+    
+    // Check if "to" date is today (or within 1 day)
+    const isToDateToday = Math.abs(toDate.getTime() - today.getTime()) < (24 * 60 * 60 * 1000);
+    
+    // Calculate expected "from" date (1 year ago)
+    const expectedFromDate = new Date(today);
+    expectedFromDate.setFullYear(today.getFullYear() - 1);
+    expectedFromDate.setHours(0, 0, 0, 0);
+    
+    // Allow 2 day tolerance for the from date (accounting for leap years)
+    const isFromDateCorrect = Math.abs(fromDate.getTime() - expectedFromDate.getTime()) < (2 * 24 * 60 * 60 * 1000);
+    
+    return isToDateToday && isFromDateCorrect;
+  };
+
+  const isAllTime = (dateRange: DateRange | undefined) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return false;
+    
+    // Check if the "from" date is Jan 1, 2000 (or close to it)
+    const fromDate = new Date(dateRange.from);
+    const allTimeStart = new Date(2000, 0, 1);
+    
+    // Within one day tolerance for comparison
+    const isStartAllTime = Math.abs(fromDate.getTime() - allTimeStart.getTime()) < (24 * 60 * 60 * 1000);
+    
+    // The "to" date should be today or within a day of today
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const toDate = new Date(dateRange.to);
+    const isEndRecent = Math.abs(toDate.getTime() - today.getTime()) < (24 * 60 * 60 * 1000);
+    
+    return isStartAllTime && isEndRecent;
+  };
+
+  return (
+    <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
+      <div className="space-y-4">
+        {/* Date Range Quick Buttons - Moved to top */}
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            variant={isLastXDays(date, 30) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(30)}
+          >
+            Last 30 days
+          </Button>
+          <Button
+            variant={isLastXDays(date, 90) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(90)}
+          >
+            Last 90 days
+          </Button>
+          <Button
+            variant={isLastYear(date) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(365)}
+          >
+            Last year
+          </Button>
+          <Button
+            variant={isAllTime(date) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(null)}
+          >
+            All time
+          </Button>
+
+          {/* Clear Filters Button */}
+          {(keyword || source !== 'all' || sentiment !== 'all') && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleClearFilters} 
+              className="ml-auto h-7 text-xs px-2.5"
+            >
+              Clear Filters
+              <X className="ml-1 h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
+        {/* Single row layout with all filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
+          {/* Start Date */}
+          <div>
+            <Label htmlFor="start-date" className="text-xs">Start Date</Label>
+            <div className="flex items-center mt-1">
+              <Input
+                id="start-date"
+                type="date"
+                value={date?.from ? format(date.from, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  const fromDate = newValue ? parseISO(newValue) : new Date(2000, 0, 1);
+                  const toDate = date?.to || new Date();
+                  handleDateChange({ from: fromDate, to: toDate });
+                }}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* End Date */}
+          <div>
+            <Label htmlFor="end-date" className="text-xs">End Date</Label>
+            <div className="flex items-center mt-1">
+              <Input
+                id="end-date"
+                type="date"
+                value={date?.to ? format(date.to, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  const toDate = newValue ? parseISO(newValue) : new Date();
+                  const fromDate = date?.from || new Date(2000, 0, 1);
+                  handleDateChange({ from: fromDate, to: toDate });
+                }}
+                className="w-full"
+              />
+            </div>
+          </div>
+
           {/* Keyword Filter */}
           <div>
-            <Label htmlFor="keyword">Keyword</Label>
+            <Label htmlFor="keyword" className="text-xs">Keyword</Label>
             <Input
               id="keyword"
               placeholder="Search by keyword"
               value={keyword}
               onChange={handleKeywordChange}
-              className="mt-1.5"
+              className="mt-1 w-full"
             />
           </div>
 
           {/* Source Filter */}
           <div>
-            <Label htmlFor="source">Source</Label>
+            <Label htmlFor="source" className="text-xs">Source</Label>
             <Select value={source} onValueChange={handleSourceChange}>
-              <SelectTrigger id="source" className="mt-1.5">
+              <SelectTrigger id="source" className="mt-1 w-full">
                 <SelectValue placeholder="All Sources" />
               </SelectTrigger>
               <SelectContent>
@@ -200,12 +362,12 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
 
           {/* Sentiment Filter */}
           <div>
-            <Label htmlFor="sentiment">Sentiment</Label>
+            <Label htmlFor="sentiment" className="text-xs">Sentiment</Label>
             <Select 
               value={sentiment} 
               onValueChange={handleSentimentChange}
             >
-              <SelectTrigger id="sentiment" className="mt-1.5">
+              <SelectTrigger id="sentiment" className="mt-1 w-full">
                 <SelectValue placeholder="All Sentiments" />
               </SelectTrigger>
               <SelectContent>
@@ -217,51 +379,46 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
             </Select>
           </div>
         </div>
-      </div>
 
-      {/* Active Filters */}
-      <div className="flex flex-wrap gap-2 mt-4">
+        {/* Active Filters */}
         {(keyword || source !== 'all' || sentiment !== 'all') && (
-          <Button variant="outline" size="sm" onClick={handleClearFilters} className="h-7">
-            Clear Filters
-            <X className="ml-2 h-3.5 w-3.5" />
-          </Button>
-        )}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {keyword && (
+              <Badge variant="outline" className="px-3 py-1">
+                Keyword: {keyword}
+                <button
+                  className="ml-1 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearKeyword}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
 
-        {keyword && (
-          <Badge variant="outline" className="px-3 py-1">
-            Keyword: {keyword}
-            <button
-              className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={handleClearKeyword}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
+            {source !== 'all' && (
+              <Badge variant="outline" className="px-3 py-1">
+                Source: {source}
+                <button
+                  className="ml-1 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearSource}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
 
-        {source !== 'all' && (
-          <Badge variant="outline" className="px-3 py-1">
-            Source: {source}
-            <button
-              className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={handleClearSource}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-
-        {sentiment !== 'all' && (
-          <Badge variant="outline" className="px-3 py-1">
-            Sentiment: {sentiment}
-            <button
-              className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={handleClearSentiment}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
+            {sentiment !== 'all' && (
+              <Badge variant="outline" className="px-3 py-1">
+                Sentiment: {sentiment}
+                <button
+                  className="ml-1 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearSentiment}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+          </div>
         )}
       </div>
     </div>
