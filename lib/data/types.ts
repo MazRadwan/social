@@ -43,6 +43,7 @@ export interface FilterOptions {
   keyword?: string;
   source?: string;
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
+  _forceUpdate?: number;
 }
 
 // API related types for future implementation

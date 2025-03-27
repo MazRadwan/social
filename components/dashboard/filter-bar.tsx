@@ -14,101 +14,147 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 interface FilterBarProps {
   onFilterChange: (filters: FilterOptions) => void
   availableSources: string[]
+  initialFilters?: FilterOptions
 }
 
-export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) {
-  const [keyword, setKeyword] = useState<string>('')
-  const [source, setSource] = useState<string>('all')
-  const [sentiment, setSentiment] = useState<'Positive' | 'Neutral' | 'Negative' | 'all'>('all')
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    to: new Date(),
-  })
+export function FilterBar({ onFilterChange, availableSources, initialFilters }: FilterBarProps) {
+  const [keyword, setKeyword] = useState<string>(initialFilters?.keyword || '')
+  const [source, setSource] = useState<string>(initialFilters?.source || 'all')
+  const [sentiment, setSentiment] = useState<'Positive' | 'Neutral' | 'Negative' | 'all'>(
+    initialFilters?.sentiment || 'all'
+  )
+  const [date, setDate] = useState<DateRange | undefined>(
+    initialFilters?.dateRange || {
+      from: new Date(2000, 0, 1), // January 1, 2000 (all time)
+      to: new Date(),
+    }
+  )
 
-  // Update filters only when explicitly triggered
-  const updateFilters = () => {
-    if (!date?.from) return;
+  // Helper function to create filters with the current state
+  const createFilters = (
+    currentKeyword = keyword,
+    currentSource = source,
+    currentSentiment = sentiment,
+    currentDate = date
+  ): FilterOptions => {
+    // Create fresh date objects
+    const fromDate = currentDate?.from ? new Date(currentDate.from.getTime()) : new Date(2000, 0, 1);
+    const toDate = currentDate?.to ? new Date(currentDate.to.getTime()) : new Date();
     
-    // Ensure to date exists (default to from date if not provided)
-    const toDate = date.to || date.from;
+    // Set proper time components
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(23, 59, 59, 999);
     
-    // Ensure end date is set to end of day for inclusive filtering
-    const endDate = new Date(toDate);
-    endDate.setHours(23, 59, 59, 999);
+    // Build filters object
+    const filters: FilterOptions = {
+      dateRange: { from: fromDate, to: toDate },
+      _forceUpdate: Date.now()
+    };
     
-    const newFilters: FilterOptions = {
-      dateRange: {
-        from: date.from,
-        to: endDate,
-      },
-    }
-
-    if (keyword) {
-      newFilters.keyword = keyword
-    }
-
-    if (source && source !== 'all') {
-      newFilters.source = source
-    }
-
-    if (sentiment && sentiment !== 'all') {
-      newFilters.sentiment = sentiment as 'Positive' | 'Neutral' | 'Negative'
-    }
-
-    console.log('Updating filters:', newFilters);
-    onFilterChange(newFilters)
-  }
+    // Add optional filters
+    if (currentKeyword) filters.keyword = currentKeyword;
+    if (currentSource !== 'all') filters.source = currentSource;
+    if (currentSentiment !== 'all') filters.sentiment = currentSentiment;
+    
+    return filters;
+  };
 
   // Handle user input changes
   const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setKeyword(e.target.value)
-    setTimeout(updateFilters, 0) // Defer update to next tick
+    const newKeyword = e.target.value;
+    setKeyword(newKeyword);
+    
+    const newFilters = createFilters(newKeyword, source, sentiment, date);
+    console.log('Updating filters with keyword:', newFilters);
+    onFilterChange(newFilters);
   }
 
   const handleSourceChange = (value: string) => {
-    setSource(value)
-    setTimeout(updateFilters, 0) // Defer update to next tick
+    setSource(value);
+    
+    const newFilters = createFilters(keyword, value, sentiment, date);
+    console.log('Updating filters with source:', newFilters);
+    onFilterChange(newFilters);
   }
 
   const handleSentimentChange = (value: string) => {
-    setSentiment(value as 'Positive' | 'Neutral' | 'Negative' | 'all')
-    setTimeout(updateFilters, 0) // Defer update to next tick
+    const newSentiment = value as 'Positive' | 'Neutral' | 'Negative' | 'all';
+    setSentiment(newSentiment);
+    
+    const newFilters = createFilters(keyword, source, newSentiment, date);
+    console.log('Updating filters with sentiment:', newFilters);
+    onFilterChange(newFilters);
   }
 
+  // Handle date range changes
   const handleDateChange = (range: DateRange | undefined) => {
     console.log('Date range changed:', range);
     
+    // Create a default range if none provided or invalid
+    let fromDate: Date;
+    let toDate: Date;
+    
     if (!range || !range.from) {
-      // Default to last 30 days if range is invalid
-      range = {
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        to: new Date(),
-      };
+      // Default to all time
+      fromDate = new Date(2000, 0, 1);
+      toDate = new Date();
+    } else {
+      // Create fresh dates from the valid range
+      fromDate = new Date(range.from.getTime());
+      toDate = range.to ? new Date(range.to.getTime()) : new Date();
     }
     
-    setDate(range);
-    setTimeout(updateFilters, 0); // Defer update to next tick
+    // Set proper time components
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(23, 59, 59, 999);
+    
+    // Update local state for UI rendering
+    const newRange = { from: fromDate, to: toDate };
+    setDate(newRange);
+    
+    // Use helper to create filters
+    const newFilters = createFilters(keyword, source, sentiment, newRange);
+    console.log('Updating filters with date range:', newFilters);
+    onFilterChange(newFilters);
   }
 
   // Clear all filters
   const handleClearFilters = () => {
-    setKeyword('')
-    setSource('all')
-    setSentiment('all')
-    setDate({
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      to: new Date(),
-    })
+    setKeyword('');
+    setSource('all');
+    setSentiment('all');
     
-    // Update with cleared filters
-    setTimeout(() => {
-      onFilterChange({
-        dateRange: {
-          from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          to: new Date(),
-        },
-      })
-    }, 0)
+    // Set to all time
+    const allTimeRange = {
+      from: new Date(2000, 0, 1), // January 1, 2000 (all time)
+      to: new Date(),
+    };
+    
+    setDate(allTimeRange);
+    
+    // Create empty filters with just date range
+    const newFilters = createFilters('', 'all', 'all', allTimeRange);
+    console.log('Clearing all filters:', newFilters);
+    onFilterChange(newFilters);
+  }
+
+  // Badge clear button handlers
+  const handleClearKeyword = () => {
+    setKeyword('');
+    const newFilters = createFilters('', source, sentiment, date);
+    onFilterChange(newFilters);
+  }
+
+  const handleClearSource = () => {
+    setSource('all');
+    const newFilters = createFilters(keyword, 'all', sentiment, date);
+    onFilterChange(newFilters);
+  }
+
+  const handleClearSentiment = () => {
+    setSentiment('all');
+    const newFilters = createFilters(keyword, source, 'all', date);
+    onFilterChange(newFilters);
   }
 
   return (
@@ -187,10 +233,7 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
             Keyword: {keyword}
             <button
               className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setKeyword('')
-                setTimeout(updateFilters, 0)
-              }}
+              onClick={handleClearKeyword}
             >
               <X className="h-3 w-3" />
             </button>
@@ -202,10 +245,7 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
             Source: {source}
             <button
               className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setSource('all')
-                setTimeout(updateFilters, 0)
-              }}
+              onClick={handleClearSource}
             >
               <X className="h-3 w-3" />
             </button>
@@ -217,10 +257,7 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
             Sentiment: {sentiment}
             <button
               className="ml-1 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setSentiment('all')
-                setTimeout(updateFilters, 0)
-              }}
+              onClick={handleClearSentiment}
             >
               <X className="h-3 w-3" />
             </button>

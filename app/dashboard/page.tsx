@@ -47,12 +47,23 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [showTooltips, setShowTooltips] = useState(false) // Set to false to disable tutorial by default
   const [currentTooltip, setCurrentTooltip] = useState(1)
+
+  // Initialize date range with explicit dates for "all time"
+  const allTimeStart = new Date(2000, 0, 1);
+  allTimeStart.setHours(0, 0, 0, 0);
+  
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  
   const [filters, setFilters] = useState<FilterOptions>({
     dateRange: {
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-      to: new Date(),
+      from: allTimeStart,
+      to: now,
     },
   })
+
+  // Log initial filters for debugging
+  console.log('Initial dashboard filters:', filters);
 
   // Fetch articles with filtering
   const { 
@@ -96,7 +107,51 @@ export default function DashboardPage() {
 
   // Handle filter changes from FilterBar component
   const handleFilterChange = (newFilters: FilterOptions) => {
-    setFilters(newFilters)
+    console.log('Dashboard received new filters:', newFilters);
+    
+    // Force immediate re-fetch with timestamp plus random value to ensure uniqueness
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 100000);
+    const forceUpdate = timestamp * 1000 + random;
+    
+    // Create a completely new filter object to avoid any reference issues
+    const updatedFilters: FilterOptions = {
+      _forceUpdate: forceUpdate
+    };
+    
+    // Handle date range with explicit new Date objects
+    if (newFilters.dateRange) {
+      const fromDate = new Date(
+        newFilters.dateRange.from instanceof Date 
+          ? newFilters.dateRange.from.getTime() 
+          : new Date(newFilters.dateRange.from).getTime()
+      );
+      
+      const toDate = new Date(
+        newFilters.dateRange.to instanceof Date 
+          ? newFilters.dateRange.to.getTime() 
+          : new Date(newFilters.dateRange.to).getTime()
+      );
+      
+      // Set proper time components
+      fromDate.setHours(0, 0, 0, 0);
+      toDate.setHours(23, 59, 59, 999);
+      
+      updatedFilters.dateRange = { 
+        from: fromDate, 
+        to: toDate 
+      };
+    }
+    
+    // Copy other filter properties
+    if (newFilters.keyword) updatedFilters.keyword = newFilters.keyword;
+    if (newFilters.source) updatedFilters.source = newFilters.source;
+    if (newFilters.sentiment) updatedFilters.sentiment = newFilters.sentiment;
+    
+    console.log('Setting new filters with force update:', updatedFilters);
+    
+    // Set state with completely new object
+    setFilters(updatedFilters);
   }
 
   // Handle skipping tutorial
@@ -232,12 +287,13 @@ export default function DashboardPage() {
                   <FilterBar 
                     onFilterChange={handleFilterChange} 
                     availableSources={availableSources} 
+                    initialFilters={filters}
                   />
 
                   {/* Total Mentions */}
                   <div className="grid gap-4 sm:gap-6 grid-cols-1">
                     <MetricsOverview 
-                      totalMentions={sentimentSummary?.total || 0} 
+                      totalMentions={sentimentSummary.total || 0} 
                       loading={sentimentLoading}
                       dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
                     />
@@ -290,6 +346,7 @@ export default function DashboardPage() {
                   <FilterBar 
                     onFilterChange={handleFilterChange} 
                     availableSources={availableSources} 
+                    initialFilters={filters}
                   />
 
                   {/* All Articles Table */}
