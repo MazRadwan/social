@@ -23,10 +23,10 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/dashboard/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
+import { Header } from "@/components/dashboard/header"
 import { DashboardTooltip } from "@/components/dashboard/dashboard-tooltip"
 import { FilterBar } from "@/components/dashboard/filter-bar"
 import { SentimentChart } from "@/components/dashboard/sentiment-chart"
@@ -225,149 +225,128 @@ export default function DashboardPage() {
             </SidebarFooter>
           </Sidebar>
 
-          <div className="flex-1 overflow-auto">
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 shadow-sm">
-              <SidebarTrigger />
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">
-                  {activeTab === "dashboard" && "Dashboard"}
-                  {activeTab === "all-data" && "All Data"}
-                  {activeTab === "ai-summary" && "AI Summary"}
-                  {activeTab === "issue-themes" && "Issue Themes"}
-                  {activeTab === "settings" && "Settings"}
-                </h1>
-              </div>
-              <div className="ml-auto flex items-center gap-2">
-                <div className="hidden md:flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Save className="mr-2 h-3.5 w-3.5" />
-                    Save View
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </header>
+          <div className="flex flex-col flex-1">
+            <Header activeTab={activeTab} />
+            
+            <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
+              <main className="p-3 sm:p-4 md:p-6 relative w-full">
+                {/* Dashboard Tooltips */}
+                {showTooltips && (
+                  <>
+                    <div className="fixed inset-0 bg-black/50 z-50" />
+                    <DashboardTooltip
+                      step={currentTooltip}
+                      totalSteps={5}
+                      onNext={() => setCurrentTooltip((prev) => Math.min(prev + 1, 5))}
+                      onPrev={() => setCurrentTooltip((prev) => Math.max(prev - 1, 1))}
+                      onSkip={handleSkipTutorial}
+                    />
+                  </>
+                )}
 
-            <main className="p-3 sm:p-4 md:p-6 relative w-full pt-2">
-              {/* Dashboard Tooltips */}
-              {showTooltips && (
-                <>
-                  <div className="fixed inset-0 bg-black/50 z-50" />
-                  <DashboardTooltip
-                    step={currentTooltip}
-                    totalSteps={5}
-                    onNext={() => setCurrentTooltip((prev) => Math.min(prev + 1, 5))}
-                    onPrev={() => setCurrentTooltip((prev) => Math.max(prev - 1, 1))}
-                    onSkip={handleSkipTutorial}
-                  />
-                </>
-              )}
-
-              {/* Dashboard Tab */}
-              {activeTab === "dashboard" && (
-                <div className="grid gap-4 sm:gap-6 w-full">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
-                      <div className="text-muted-foreground">
-                        Monitoring keywords:{" "}
-                        {tags?.slice(0, 3).map((tag) => (
-                          <Badge key={tag.tag} variant="outline" className="ml-1">
-                            {tag.tag}
-                          </Badge>
-                        ))}
+                {/* Dashboard Tab */}
+                {activeTab === "dashboard" && (
+                  <div className="grid gap-4 sm:gap-6 w-full">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
+                        <div className="text-muted-foreground">
+                          Monitoring keywords:{" "}
+                          {tags?.slice(0, 3).map((tag) => (
+                            <Badge key={tag.tag} variant="outline" className="ml-1">
+                              {tag.tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Filter Bar */}
-                  <FilterBar 
-                    onFilterChange={handleFilterChange} 
-                    availableSources={availableSources} 
-                    initialFilters={filters}
-                  />
+                    {/* Filter Bar */}
+                    <FilterBar 
+                      onFilterChange={handleFilterChange} 
+                      availableSources={availableSources} 
+                      initialFilters={filters}
+                    />
 
-                  {/* Total Mentions */}
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1">
-                    <MetricsOverview 
-                      totalMentions={sentimentSummary.total || 0} 
-                      loading={sentimentLoading}
-                      dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
+                    {/* Total Mentions */}
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1">
+                      <MetricsOverview 
+                        totalMentions={sentimentSummary.total || 0} 
+                        loading={sentimentLoading}
+                        dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
+                      />
+                    </div>
+
+                    {/* Sentiment and Mentions Charts */}
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+                      <SentimentChart 
+                        sentimentData={sentimentSummary} 
+                        loading={sentimentLoading} 
+                      />
+                      <MentionsChart 
+                        mentionsData={mentions} 
+                        loading={mentionsLoading} 
+                        type="area"
+                      />
+                    </div>
+
+                    {/* Top Sources and Tags */}
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+                      <SourcesChart 
+                        sourcesData={sources} 
+                        loading={sourcesLoading} 
+                      />
+                      <TagsChart 
+                        tagsData={tags} 
+                        loading={tagsLoading} 
+                        type="cloud"
+                      />
+                    </div>
+
+                    {/* Recent Articles Table */}
+                    <ArticlesTable 
+                      articles={articles} 
+                      loading={articlesLoading} 
+                      pageSize={10}
                     />
                   </div>
+                )}
 
-                  {/* Sentiment and Mentions Charts */}
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-                    <SentimentChart 
-                      sentimentData={sentimentSummary} 
-                      loading={sentimentLoading} 
-                    />
-                    <MentionsChart 
-                      mentionsData={mentions} 
-                      loading={mentionsLoading} 
-                      type="area"
-                    />
-                  </div>
+                {/* All Data Tab */}
+                {activeTab === "all-data" && (
+                  <div className="grid gap-6">
+                      <div>
+                        <h2 className="text-2xl font-bold tracking-tight">All Data</h2>
+                        <p className="text-muted-foreground">View and filter all mentions across platforms</p>
+                    </div>
 
-                  {/* Top Sources and Tags */}
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-                    <SourcesChart 
-                      sourcesData={sources} 
-                      loading={sourcesLoading} 
+                    {/* Filter Bar */}
+                    <FilterBar 
+                      onFilterChange={handleFilterChange} 
+                      availableSources={availableSources} 
+                      initialFilters={filters}
                     />
-                    <TagsChart 
-                      tagsData={tags} 
-                      loading={tagsLoading} 
-                      type="cloud"
+
+                    {/* All Articles Table */}
+                    <ArticlesTable 
+                      articles={articles} 
+                      loading={articlesLoading} 
+                      pageSize={20}
                     />
                   </div>
+                )}
 
-                  {/* Recent Articles Table */}
-                  <ArticlesTable 
-                    articles={articles} 
-                    loading={articlesLoading} 
-                    pageSize={10}
-                  />
-                </div>
-              )}
-
-              {/* All Data Tab */}
-              {activeTab === "all-data" && (
-                <div className="grid gap-6">
-                    <div>
-                      <h2 className="text-2xl font-bold tracking-tight">All Data</h2>
-                      <p className="text-muted-foreground">View and filter all mentions across platforms</p>
+                {/* Placeholder for other tabs */}
+                {(activeTab === "ai-summary" || activeTab === "issue-themes" || activeTab === "settings") && (
+                  <div className="grid place-items-center h-[50vh]">
+                    <div className="text-center">
+                      <h3 className="text-xl font-semibold mb-2">{activeTab} Tab</h3>
+                      <p className="text-muted-foreground">This section is under development</p>
+                    </div>
                   </div>
-
-                  {/* Filter Bar */}
-                  <FilterBar 
-                    onFilterChange={handleFilterChange} 
-                    availableSources={availableSources} 
-                    initialFilters={filters}
-                  />
-
-                  {/* All Articles Table */}
-                  <ArticlesTable 
-                    articles={articles} 
-                    loading={articlesLoading} 
-                    pageSize={20}
-                  />
-                </div>
-              )}
-
-              {/* Placeholder for other tabs */}
-              {(activeTab === "ai-summary" || activeTab === "issue-themes" || activeTab === "settings") && (
-                <div className="grid place-items-center h-[50vh]">
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold mb-2">{activeTab} Tab</h3>
-                    <p className="text-muted-foreground">This section is under development</p>
-                  </div>
-                </div>
-              )}
-            </main>
+                )}
+              </main>
+            </div>
           </div>
         </div>
       </SidebarProvider>
