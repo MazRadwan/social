@@ -7,7 +7,7 @@ import { PanelLeft } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { SidebarSheet, SidebarSheetContent, SidebarSheetTitle } from "@/components/ui/sidebar-sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const SIDEBAR_WIDTH = "14rem"
@@ -132,8 +132,8 @@ const Sidebar = React.forwardRef<
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
+      <SidebarSheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <SidebarSheetContent
           data-sidebar="sidebar"
           data-mobile="true"
           className="w-[--sidebar-width] bg-background p-0"
@@ -144,9 +144,10 @@ const Sidebar = React.forwardRef<
           }
           side={side}
         >
+          <SidebarSheetTitle className="sr-only">Navigation Sidebar</SidebarSheetTitle>
           <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
+        </SidebarSheetContent>
+      </SidebarSheet>
     )
   }
 
@@ -198,7 +199,7 @@ Sidebar.displayName = "Sidebar"
 
 const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.ComponentProps<typeof Button>>(
   ({ className, onClick, ...props }, ref) => {
-    const { toggleSidebar } = useSidebar()
+    const { toggleSidebar, state } = useSidebar()
 
     return (
       <Button
@@ -206,14 +207,14 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         data-sidebar="trigger"
         variant="ghost"
         size="icon"
-        className={cn("h-8 w-8", className)}
+        className={cn("h-8 w-8 hover:bg-muted/60", className)}
         onClick={(event) => {
           onClick?.(event)
           toggleSidebar()
         }}
         {...props}
       >
-        <PanelLeft className="h-4 w-4" />
+        <PanelLeft className={cn("h-4 w-4 transition-transform duration-200", state === "collapsed" && "rotate-180")} />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
     )
