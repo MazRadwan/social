@@ -46,7 +46,13 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
   // Initialize searchTags from initialFilters if keyword exists
   useEffect(() => {
     if (initialFilters?.keyword) {
-      setSearchTags([initialFilters.keyword]);
+      // Split by OR to handle pre-existing search strings
+      if (initialFilters.keyword.includes(' OR ')) {
+        const tags = initialFilters.keyword.split(' OR ').map(tag => tag.trim());
+        setSearchTags(tags);
+      } else {
+        setSearchTags([initialFilters.keyword]);
+      }
     }
   }, [initialFilters]);
 
@@ -76,8 +82,14 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     // Add optional filters
     // If we have search tags, join them with OR for keyword search
     if (currentSearchTags.length > 0) {
-      // Each term should be searched independently
-      filters.keyword = currentSearchTags.join(' OR ');
+      // Each term should be searched independently, but joined for the API
+      const cleanTags = currentSearchTags.map(tag => tag.trim()).filter(Boolean);
+      if (cleanTags.length > 0) {
+        filters.keyword = cleanTags.join(' OR ');
+        
+        // Store the original tags for UI display purposes
+        (filters as any)._originalTags = [...cleanTags];
+      }
     } else if (currentKeyword) {
       filters.keyword = currentKeyword;
     }
@@ -535,7 +547,11 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
                 className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-1"
               />
               {searchTags.map((tag, index) => (
-                <Badge key={`inline-tag-${index}`} variant="secondary" className="px-2 py-0.5 h-7 flex items-center gap-1">
+                <Badge 
+                  key={`inline-tag-${index}`} 
+                  variant="secondary" 
+                  className="px-2 py-0.5 h-7 flex items-center gap-1 whitespace-nowrap"
+                >
                   {tag}
                   <button
                     type="button"
