@@ -240,7 +240,56 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
 
   return (
     <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
-      <div className="space-y-3 sm:space-y-0">
+      <div className="space-y-4">
+        {/* Date Range Quick Buttons - Moved to top */}
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            variant={isLastXDays(date, 30) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(30)}
+          >
+            Last 30 days
+          </Button>
+          <Button
+            variant={isLastXDays(date, 90) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(90)}
+          >
+            Last 90 days
+          </Button>
+          <Button
+            variant={isLastYear(date) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(365)}
+          >
+            Last year
+          </Button>
+          <Button
+            variant={isAllTime(date) ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => handleQuickDateSelect(null)}
+          >
+            All time
+          </Button>
+
+          {/* Clear Filters Button */}
+          {(keyword || source !== 'all' || sentiment !== 'all') && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleClearFilters} 
+              className="ml-auto h-7 text-xs px-2.5"
+            >
+              Clear Filters
+              <X className="ml-1 h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
         {/* Single row layout with all filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
           {/* Start Date */}
@@ -329,46 +378,6 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Date Range Quick Buttons - Moved to separate row for better mobile layout */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Button
-            variant={isLastXDays(date, 30) ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickDateSelect(30)}
-          >
-            Last 30 days
-          </Button>
-          <Button
-            variant={isLastXDays(date, 90) ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickDateSelect(90)}
-          >
-            Last 90 days
-          </Button>
-          <Button
-            variant={isLastYear(date) ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickDateSelect(365)}
-          >
-            Last year
-          </Button>
-          <Button
-            variant={isAllTime(date) ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickDateSelect(null)}
-          >
-            All time
-          </Button>
-
-          {/* Clear Filters Button */}
-          {(keyword || source !== 'all' || sentiment !== 'all') && (
-            <Button variant="outline" size="sm" onClick={handleClearFilters} className="ml-auto">
-              Clear Filters
-              <X className="ml-1 h-3.5 w-3.5" />
-            </Button>
-          )}
         </div>
 
         {/* Active Filters */}
