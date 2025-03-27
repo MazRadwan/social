@@ -4,10 +4,11 @@ import * as React from "react"
 import { CalendarIcon } from "lucide-react"
 import { format, parse, isValid } from "date-fns"
 import { DateRange } from "react-day-picker"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+// import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -23,76 +24,146 @@ export function DateRangePicker({
   onDateRangeChange,
   className,
 }: DateRangePickerProps) {
-  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false)
-  const [startDateText, setStartDateText] = React.useState("")
-  const [endDateText, setEndDateText] = React.useState("")
-  const [dropdownOpen, setDropdownOpen] = React.useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   
-  // State for dropdown selectors
-  const [startYear, setStartYear] = React.useState<string>("")
-  const [startMonth, setStartMonth] = React.useState<string>("")
-  const [startDay, setStartDay] = React.useState<string>("")
-  
-  // Update text inputs when dateRange changes
-  React.useEffect(() => {
-    if (dateRange?.from) {
-      setStartDateText(format(dateRange.from, "yyyy-MM-dd"))
-      setStartYear(dateRange.from.getFullYear().toString())
-      setStartMonth((dateRange.from.getMonth() + 1).toString().padStart(2, '0'))
-      setStartDay(dateRange.from.getDate().toString().padStart(2, '0'))
-    }
-    if (dateRange?.to) {
-      setEndDateText(format(dateRange.to, "yyyy-MM-dd"))
-    }
-  }, [dateRange])
+  // State for dropdown selectors - only used for the dropdown UI
+  const [startYear, setStartYear] = useState<string>("")
+  const [startMonth, setStartMonth] = useState<string>("")
+  const [startDay, setStartDay] = useState<string>("")
 
-  // Quick select options
+  // Compute text values directly from props
+  const startDateText = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : ""
+  const endDateText = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : ""
+  
+  // Helper functions for date range type detection
+  const isLastXDays = (days: number): boolean => {
+    if (!dateRange?.from) return false;
+    
+    // Get today with time set to start of day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate target date same way as handleQuickSelect
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() - days);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    // Get from date without time
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in days
+    const diffTime = Math.abs(fromDate.getTime() - targetDate.getTime());
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Allow up to 2 days of offset for better tolerance
+    return diffDays <= 2;
+  };
+
+  const isLastYear = (): boolean => {
+    if (!dateRange?.from) return false;
+    
+    // Get today with time set to start of day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate one year ago same way as handleQuickSelect
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    oneYearAgo.setHours(0, 0, 0, 0);
+    
+    // Get from date without time
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in days
+    const diffTime = Math.abs(fromDate.getTime() - oneYearAgo.getTime());
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Allow up to 3 days of offset for better tolerance (considering leap years)
+    return diffDays <= 3;
+  };
+
+  const isAllTime = (): boolean => {
+    if (!dateRange?.from) return false;
+    
+    const fromDate = new Date(dateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+    
+    // Use the same approach - check if year is 2000 and month is January
+    return fromDate.getFullYear() === 2000 && fromDate.getMonth() === 0;
+  };
+
+  // Quick select options with immediate callback and complete state preparation
   const handleQuickSelect = (days: number | null) => {
+    let from, to;
+    
+    // End of today for the "to" date
+    to = new Date();
+    to.setHours(23, 59, 59, 999);
+    
     if (days === null) {
-      // All time - use a very old date and today
-      onDateRangeChange({
-        from: new Date(2000, 0, 1),
-        to: new Date(),
-      })
+      // All time - January 1, 2000
+      from = new Date(2000, 0, 1);
     } else if (days === 365) {
-      // Last year
-      const to = new Date()
-      const from = new Date()
-      from.setFullYear(from.getFullYear() - 1)
-      onDateRangeChange({ from, to })
+      // Last year - exactly 365 days ago
+      from = new Date();
+      from.setFullYear(from.getFullYear() - 1);
     } else {
       // Last X days
-      const to = new Date()
-      const from = new Date()
-      from.setDate(from.getDate() - days)
-      onDateRangeChange({ from, to })
+      from = new Date();
+      from.setDate(from.getDate() - days);
     }
+    
+    // Ensure consistent start of day
+    from.setHours(0, 0, 0, 0);
+    
+    console.log(`Quick select direct: ${days === null ? 'all time' : days + ' days'}`, { 
+      from: from.toISOString(), 
+      to: to.toISOString() 
+    });
+    
+    // Force a fresh date range object every time
+    const newRange: DateRange = {
+      from: new Date(from),
+      to: new Date(to)
+    };
+    
+    // Immediately notify parent with complete change
+    onDateRangeChange(newRange);
   }
 
   // Handle manual input changes
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setStartDateText(value)
     
     const parsedDate = parse(value, "yyyy-MM-dd", new Date())
     if (isValid(parsedDate)) {
-      onDateRangeChange({
+      // Create a new date range object to avoid reference issues
+      const newRange = {
         from: parsedDate,
         to: dateRange?.to,
-      })
+      };
+      console.log('Manual start date change:', newRange);
+      onDateRangeChange(newRange);
     }
   }
 
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setEndDateText(value)
     
     const parsedDate = parse(value, "yyyy-MM-dd", new Date())
     if (isValid(parsedDate)) {
-      onDateRangeChange({
+      // Ensure end date is set to the end of the day
+      parsedDate.setHours(23, 59, 59, 999);
+      
+      // Create a new date range object to avoid reference issues
+      const newRange = {
         from: dateRange?.from,
         to: parsedDate,
-      })
+      };
+      console.log('Manual end date change:', newRange);
+      onDateRangeChange(newRange);
     }
   }
 
@@ -103,13 +174,24 @@ export function DateRangePicker({
       const parsedDate = parse(dateString, "yyyy-MM-dd", new Date())
       
       if (isValid(parsedDate)) {
-        onDateRangeChange({
+        const newRange = {
           from: parsedDate,
           to: dateRange?.to || new Date(),
-        })
+        };
+        console.log('Dropdown date selection:', newRange);
+        onDateRangeChange(newRange);
       }
     }
     setDropdownOpen(false)
+  }
+
+  // Update dropdown values when calendar button is clicked
+  const handleCalendarButtonClick = () => {
+    if (dateRange?.from) {
+      setStartYear(dateRange.from.getFullYear().toString())
+      setStartMonth((dateRange.from.getMonth() + 1).toString().padStart(2, '0'))
+      setStartDay(dateRange.from.getDate().toString().padStart(2, '0'))
+    }
   }
 
   // Generate year options (2000 to current year)
@@ -145,20 +227,15 @@ export function DateRangePicker({
       {/* Quick select buttons */}
       <div className="flex flex-wrap gap-2">
         <Button 
-          variant="outline" 
+          variant={isLastXDays(30) ? "default" : "outline"} 
           size="sm" 
           onClick={() => handleQuickSelect(30)}
-          className={cn(
-            "text-xs h-8",
-            dateRange?.from && 
-            dateRange.from.getTime() === new Date().setDate(new Date().getDate() - 30) &&
-            "bg-primary text-primary-foreground hover:bg-primary/90"
-          )}
+          className="text-xs h-8"
         >
           Last 30 days
         </Button>
         <Button 
-          variant="outline" 
+          variant={isLastXDays(90) ? "default" : "outline"} 
           size="sm" 
           onClick={() => handleQuickSelect(90)}
           className="text-xs h-8"
@@ -166,7 +243,7 @@ export function DateRangePicker({
           Last 90 days
         </Button>
         <Button 
-          variant="outline" 
+          variant={isLastYear() ? "default" : "outline"} 
           size="sm" 
           onClick={() => handleQuickSelect(365)}
           className="text-xs h-8"
@@ -174,7 +251,7 @@ export function DateRangePicker({
           Last year
         </Button>
         <Button 
-          variant="outline" 
+          variant={isAllTime() ? "default" : "outline"} 
           size="sm" 
           onClick={() => handleQuickSelect(null)}
           className="text-xs h-8"
@@ -195,7 +272,13 @@ export function DateRangePicker({
               onChange={handleStartDateChange}
               className="pr-10"
             />
-            <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <Popover 
+              open={dropdownOpen} 
+              onOpenChange={(open) => {
+                setDropdownOpen(open);
+                if (open) handleCalendarButtonClick();
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 

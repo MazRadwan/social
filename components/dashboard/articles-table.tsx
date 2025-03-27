@@ -103,11 +103,11 @@ export function ArticlesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentArticles.map((article) => {
+              {currentArticles.map((article, index) => {
                 const sentiment = getPredominantSentiment(article)
                 
                 return (
-                  <TableRow key={article.title}>
+                  <TableRow key={`article-${startIndex + index}`}>
                     <TableCell className="max-w-[400px]">
                       <div className="flex items-start">
                         <div>
