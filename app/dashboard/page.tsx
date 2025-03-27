@@ -226,7 +226,7 @@ export default function DashboardPage() {
           </Sidebar>
 
           <div className="flex-1 overflow-auto">
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-6">
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 shadow-sm">
               <SidebarTrigger />
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-semibold">
@@ -251,7 +251,7 @@ export default function DashboardPage() {
               </div>
             </header>
 
-            <main className="p-3 sm:p-4 md:p-6 relative w-full">
+            <main className="p-3 sm:p-4 md:p-6 relative w-full pt-2">
               {/* Dashboard Tooltips */}
               {showTooltips && (
                 <>
