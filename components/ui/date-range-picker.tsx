@@ -44,28 +44,37 @@ export function DateRangePicker({
     if (dateRange?.to) {
       setEndDateText(format(dateRange.to, "yyyy-MM-dd"))
     }
+    
+    // Log the current date range for debugging
+    console.log('DateRangePicker current dateRange:', dateRange);
   }, [dateRange])
 
   // Quick select options
   const handleQuickSelect = (days: number | null) => {
     if (days === null) {
       // All time - use a very old date and today
-      onDateRangeChange({
+      const newRange = {
         from: new Date(2000, 0, 1),
         to: new Date(),
-      })
+      };
+      console.log('Quick select all time:', newRange);
+      onDateRangeChange(newRange);
     } else if (days === 365) {
       // Last year
-      const to = new Date()
-      const from = new Date()
-      from.setFullYear(from.getFullYear() - 1)
-      onDateRangeChange({ from, to })
+      const to = new Date();
+      const from = new Date();
+      from.setFullYear(from.getFullYear() - 1);
+      const newRange = { from, to };
+      console.log('Quick select last year:', newRange);
+      onDateRangeChange(newRange);
     } else {
       // Last X days
-      const to = new Date()
-      const from = new Date()
-      from.setDate(from.getDate() - days)
-      onDateRangeChange({ from, to })
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - days);
+      const newRange = { from, to };
+      console.log('Quick select last days:', newRange);
+      onDateRangeChange(newRange);
     }
   }
 
@@ -76,10 +85,12 @@ export function DateRangePicker({
     
     const parsedDate = parse(value, "yyyy-MM-dd", new Date())
     if (isValid(parsedDate)) {
-      onDateRangeChange({
+      const newRange = {
         from: parsedDate,
         to: dateRange?.to,
-      })
+      };
+      console.log('Manual start date change:', newRange);
+      onDateRangeChange(newRange);
     }
   }
 
@@ -89,10 +100,15 @@ export function DateRangePicker({
     
     const parsedDate = parse(value, "yyyy-MM-dd", new Date())
     if (isValid(parsedDate)) {
-      onDateRangeChange({
+      // Ensure end date is set to the end of the day
+      parsedDate.setHours(23, 59, 59, 999);
+      
+      const newRange = {
         from: dateRange?.from,
         to: parsedDate,
-      })
+      };
+      console.log('Manual end date change:', newRange);
+      onDateRangeChange(newRange);
     }
   }
 
@@ -103,10 +119,12 @@ export function DateRangePicker({
       const parsedDate = parse(dateString, "yyyy-MM-dd", new Date())
       
       if (isValid(parsedDate)) {
-        onDateRangeChange({
+        const newRange = {
           from: parsedDate,
           to: dateRange?.to || new Date(),
-        })
+        };
+        console.log('Dropdown date selection:', newRange);
+        onDateRangeChange(newRange);
       }
     }
     setDropdownOpen(false)

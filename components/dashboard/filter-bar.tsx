@@ -29,10 +29,17 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
   const updateFilters = () => {
     if (!date?.from) return;
     
+    // Ensure to date exists (default to from date if not provided)
+    const toDate = date.to || date.from;
+    
+    // Ensure end date is set to end of day for inclusive filtering
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+    
     const newFilters: FilterOptions = {
       dateRange: {
         from: date.from,
-        to: date.to || date.from,
+        to: endDate,
       },
     }
 
@@ -48,6 +55,7 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
       newFilters.sentiment = sentiment as 'Positive' | 'Neutral' | 'Negative'
     }
 
+    console.log('Updating filters:', newFilters);
     onFilterChange(newFilters)
   }
 
@@ -68,10 +76,18 @@ export function FilterBar({ onFilterChange, availableSources }: FilterBarProps) 
   }
 
   const handleDateChange = (range: DateRange | undefined) => {
-    setDate(range)
-    if (range?.from) {
-      setTimeout(updateFilters, 0) // Defer update to next tick
+    console.log('Date range changed:', range);
+    
+    if (!range || !range.from) {
+      // Default to last 30 days if range is invalid
+      range = {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: new Date(),
+      };
     }
+    
+    setDate(range);
+    setTimeout(updateFilters, 0); // Defer update to next tick
   }
 
   // Clear all filters

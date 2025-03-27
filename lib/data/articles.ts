@@ -16,8 +16,10 @@ class ArticleService {
   static async getArticles(): Promise<Article[]> {
     try {
       // In a future implementation, this would be an API call
+      console.log('Loading data from:', this.dataFilePath);
       const jsonData = fs.readFileSync(this.dataFilePath, 'utf8');
       const articles: Article[] = JSON.parse(jsonData);
+      console.log(`Loaded ${articles.length} articles from data file`);
       return articles;
     } catch (error) {
       console.error('Error loading articles data:', error);

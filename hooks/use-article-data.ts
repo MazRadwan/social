@@ -6,6 +6,26 @@ const isEqual = (a: any, b: any): boolean => {
   return JSON.stringify(a) === JSON.stringify(b);
 };
 
+// Helper to ensure dates are properly serialized
+const prepareFiltersForAPI = (filters?: FilterOptions): FilterOptions | undefined => {
+  if (!filters) return undefined;
+  
+  const preparedFilters = { ...filters };
+  
+  // Handle date range serialization
+  if (preparedFilters.dateRange) {
+    const { from, to } = preparedFilters.dateRange;
+    
+    // Ensure these are Date objects before converting to ISO strings
+    preparedFilters.dateRange = {
+      from: from instanceof Date ? from : new Date(from),
+      to: to instanceof Date ? to : new Date(to)
+    };
+  }
+  
+  return preparedFilters;
+};
+
 // Hook for fetching articles with filtering capability
 export function useArticles(initialFilters?: FilterOptions) {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -29,27 +49,29 @@ export function useArticles(initialFilters?: FilterOptions) {
       try {
         // Build query string from filters
         const params = new URLSearchParams();
+        const preparedFilters = prepareFiltersForAPI(initialFilters);
         
-        if (initialFilters?.dateRange) {
-          params.set('from', initialFilters.dateRange.from.toISOString());
-          params.set('to', initialFilters.dateRange.to.toISOString());
+        if (preparedFilters?.dateRange) {
+          params.set('from', preparedFilters.dateRange.from.toISOString());
+          params.set('to', preparedFilters.dateRange.to.toISOString());
         }
         
-        if (initialFilters?.keyword) {
-          params.set('keyword', initialFilters.keyword);
+        if (preparedFilters?.keyword) {
+          params.set('keyword', preparedFilters.keyword);
         }
         
-        if (initialFilters?.source) {
-          params.set('source', initialFilters.source);
+        if (preparedFilters?.source) {
+          params.set('source', preparedFilters.source);
         }
         
-        if (initialFilters?.sentiment) {
-          params.set('sentiment', initialFilters.sentiment);
+        if (preparedFilters?.sentiment) {
+          params.set('sentiment', preparedFilters.sentiment);
         }
         
         const queryString = params.toString();
         const url = `/api/articles${queryString ? `?${queryString}` : ''}`;
         
+        console.log('Fetching articles with URL:', url);
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -57,8 +79,10 @@ export function useArticles(initialFilters?: FilterOptions) {
         }
         
         const responseData = await response.json();
+        console.log('Articles response:', responseData);
         setArticles(responseData.data || []);
       } catch (err) {
+        console.error('Error fetching articles:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -84,6 +108,8 @@ export function useSentimentSummary(filters?: FilterOptions) {
       return;
     }
 
+    console.log('Fetching sentiment summary with filters:', filters);
+
     // Update reference
     previousFiltersRef.current = filters;
     
@@ -92,6 +118,8 @@ export function useSentimentSummary(filters?: FilterOptions) {
       setError(null);
       
       try {
+        const preparedFilters = prepareFiltersForAPI(filters);
+        
         const response = await fetch('/api/articles', {
           method: 'POST',
           headers: {
@@ -99,7 +127,7 @@ export function useSentimentSummary(filters?: FilterOptions) {
           },
           body: JSON.stringify({
             action: 'sentiment_summary',
-            filters,
+            filters: preparedFilters,
           }),
         });
         
@@ -108,8 +136,10 @@ export function useSentimentSummary(filters?: FilterOptions) {
         }
         
         const responseData = await response.json();
+        console.log('Sentiment summary response:', responseData);
         setSummary(responseData.data || null);
       } catch (err) {
+        console.error('Error fetching sentiment summary:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -243,6 +273,8 @@ export function useMentionsOverTime(filters?: FilterOptions) {
       return;
     }
 
+    console.log('Fetching mentions over time with filters:', filters);
+
     // Update reference
     previousFiltersRef.current = filters;
     
@@ -251,6 +283,8 @@ export function useMentionsOverTime(filters?: FilterOptions) {
       setError(null);
       
       try {
+        const preparedFilters = prepareFiltersForAPI(filters);
+        
         const response = await fetch('/api/articles', {
           method: 'POST',
           headers: {
@@ -258,7 +292,7 @@ export function useMentionsOverTime(filters?: FilterOptions) {
           },
           body: JSON.stringify({
             action: 'mentions_over_time',
-            filters,
+            filters: preparedFilters,
           }),
         });
         
@@ -267,8 +301,10 @@ export function useMentionsOverTime(filters?: FilterOptions) {
         }
         
         const responseData = await response.json();
+        console.log('Mentions over time response:', responseData);
         setMentions(responseData.data?.mentions || []);
       } catch (err) {
+        console.error('Error fetching mentions over time:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
