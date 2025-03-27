@@ -55,6 +55,13 @@ class ArticleService {
         if (!hasKeyword) return false;
       }
       
+      // Filter by specific tag
+      if (options.tag) {
+        if (!article.tags || !article.tags.some(tag => tag === options.tag)) {
+          return false;
+        }
+      }
+      
       // Filter by source
       if (options.source && article.source !== options.source) {
         return false;
