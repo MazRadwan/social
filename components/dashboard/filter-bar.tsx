@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { FilterOptions } from '@/lib/data/types'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { format, parseISO } from 'date-fns'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface FilterBarProps {
   onFilterChange: (filters: FilterOptions) => void
@@ -18,8 +19,19 @@ interface FilterBarProps {
   initialFilters?: FilterOptions
 }
 
+// Define the list of monitoring keywords
+const MONITORING_KEYWORDS = [
+  "all keywords",
+  "condominium act",
+  "condominium authority tribunal",
+  "condominium authority",
+  "ontario condo laws"
+]
+
 export function FilterBar({ onFilterChange, availableSources, initialFilters }: FilterBarProps) {
   const [keyword, setKeyword] = useState<string>(initialFilters?.keyword || '')
+  const [searchTags, setSearchTags] = useState<string[]>([])
+  const [selectedKeyword, setSelectedKeyword] = useState<string>("all keywords")
   const [source, setSource] = useState<string>(initialFilters?.source || 'all')
   const [sentiment, setSentiment] = useState<'Positive' | 'Neutral' | 'Negative' | 'all'>(
     initialFilters?.sentiment || 'all'
@@ -31,12 +43,27 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     }
   )
 
+  // Initialize searchTags from initialFilters if keyword exists
+  useEffect(() => {
+    if (initialFilters?.keyword) {
+      // Split by OR to handle pre-existing search strings
+      if (initialFilters.keyword.includes(' OR ')) {
+        const tags = initialFilters.keyword.split(' OR ').map(tag => tag.trim());
+        setSearchTags(tags);
+      } else {
+        setSearchTags([initialFilters.keyword]);
+      }
+    }
+  }, [initialFilters]);
+
   // Helper function to create filters with the current state
   const createFilters = (
-    currentKeyword = keyword,
+    currentKeyword = '',
     currentSource = source,
     currentSentiment = sentiment,
-    currentDate = date
+    currentDate = date,
+    currentSelectedKeyword = selectedKeyword,
+    currentSearchTags = searchTags
   ): FilterOptions => {
     // Create fresh date objects
     const fromDate = currentDate?.from ? new Date(currentDate.from.getTime()) : new Date(2000, 0, 1);
@@ -53,9 +80,23 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     };
     
     // Add optional filters
-    if (currentKeyword) filters.keyword = currentKeyword;
+    // If we have search tags, join them with OR for keyword search
+    if (currentSearchTags.length > 0) {
+      // Each term should be searched independently, but joined for the API
+      const cleanTags = currentSearchTags.map(tag => tag.trim()).filter(Boolean);
+      if (cleanTags.length > 0) {
+        filters.keyword = cleanTags.join(' OR ');
+        
+        // Store the original tags for UI display purposes
+        (filters as any)._originalTags = [...cleanTags];
+      }
+    } else if (currentKeyword) {
+      filters.keyword = currentKeyword;
+    }
+    
     if (currentSource !== 'all') filters.source = currentSource;
     if (currentSentiment !== 'all') filters.sentiment = currentSentiment;
+    if (currentSelectedKeyword !== 'all keywords') filters.tag = currentSelectedKeyword;
     
     return filters;
   };
@@ -65,16 +106,54 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     const newKeyword = e.target.value;
     setKeyword(newKeyword);
     
-    const newFilters = createFilters(newKeyword, source, sentiment, date);
-    console.log('Updating filters with keyword:', newFilters);
+    // We don't update filters immediately on change anymore
+    // Only update when Enter is pressed or when the keyword is cleared
+    if (newKeyword === '') {
+      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
+      onFilterChange(newFilters);
+    }
+  }
+
+  // Handle Enter key press in the keyword search field
+  const handleKeywordKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && keyword.trim()) {
+      e.preventDefault();
+      
+      // Add to search tags
+      const newSearchTags = [...searchTags, keyword.trim()];
+      setSearchTags(newSearchTags);
+      
+      // Create filters with the updated search tags
+      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
+      console.log('Search submitted with keyword tags:', newSearchTags);
+      onFilterChange(newFilters);
+      
+      // Clear the search input
+      setKeyword('');
+    }
+  }
+
+  // Handle removing a search tag
+  const handleRemoveSearchTag = (tagToRemove: string) => {
+    const newSearchTags = searchTags.filter(tag => tag !== tagToRemove);
+    setSearchTags(newSearchTags);
+    
+    // Update filters with the new tags
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
+    onFilterChange(newFilters);
+  }
+
+  const handleSelectedKeywordChange = (value: string) => {
+    setSelectedKeyword(value);
+    
+    const newFilters = createFilters(keyword, source, sentiment, date, value, searchTags);
     onFilterChange(newFilters);
   }
 
   const handleSourceChange = (value: string) => {
     setSource(value);
     
-    const newFilters = createFilters(keyword, value, sentiment, date);
-    console.log('Updating filters with source:', newFilters);
+    const newFilters = createFilters(keyword, value, sentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -82,8 +161,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     const newSentiment = value as 'Positive' | 'Neutral' | 'Negative' | 'all';
     setSentiment(newSentiment);
     
-    const newFilters = createFilters(keyword, source, newSentiment, date);
-    console.log('Updating filters with sentiment:', newFilters);
+    const newFilters = createFilters(keyword, source, newSentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -114,14 +192,15 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(newRange);
     
     // Use helper to create filters
-    const newFilters = createFilters(keyword, source, sentiment, newRange);
-    console.log('Updating filters with date range:', newFilters);
+    const newFilters = createFilters(keyword, source, sentiment, newRange, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
   // Clear all filters
   const handleClearFilters = () => {
     setKeyword('');
+    setSearchTags([]);
+    setSelectedKeyword('all keywords');
     setSource('all');
     setSentiment('all');
     
@@ -134,27 +213,32 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(allTimeRange);
     
     // Create empty filters with just date range
-    const newFilters = createFilters('', 'all', 'all', allTimeRange);
-    console.log('Clearing all filters:', newFilters);
+    const newFilters = createFilters('', 'all', 'all', allTimeRange, 'all keywords', []);
     onFilterChange(newFilters);
   }
 
   // Badge clear button handlers
   const handleClearKeyword = () => {
     setKeyword('');
-    const newFilters = createFilters('', source, sentiment, date);
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
+    onFilterChange(newFilters);
+  }
+
+  const handleClearSelectedKeyword = () => {
+    setSelectedKeyword('all keywords');
+    const newFilters = createFilters(keyword, source, sentiment, date, 'all keywords', searchTags);
     onFilterChange(newFilters);
   }
 
   const handleClearSource = () => {
     setSource('all');
-    const newFilters = createFilters(keyword, 'all', sentiment, date);
+    const newFilters = createFilters(keyword, 'all', sentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
   const handleClearSentiment = () => {
     setSentiment('all');
-    const newFilters = createFilters(keyword, source, 'all', date);
+    const newFilters = createFilters(keyword, source, 'all', date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -238,189 +322,251 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     return isStartAllTime && isEndRecent;
   };
 
-  return (
-    <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
-      <div className="space-y-4">
-        {/* Date Range Quick Buttons - Moved to top */}
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant={isLastXDays(date, 30) ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs px-2.5"
-            onClick={() => handleQuickDateSelect(30)}
-          >
-            Last 30 days
-          </Button>
-          <Button
-            variant={isLastXDays(date, 90) ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs px-2.5"
-            onClick={() => handleQuickDateSelect(90)}
-          >
-            Last 90 days
-          </Button>
-          <Button
-            variant={isLastYear(date) ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs px-2.5"
-            onClick={() => handleQuickDateSelect(365)}
-          >
-            Last year
-          </Button>
-          <Button
-            variant={isAllTime(date) ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs px-2.5"
-            onClick={() => handleQuickDateSelect(null)}
-          >
-            All time
-          </Button>
+  // Handle removing all search tags at once
+  const handleClearAllSearchTags = () => {
+    setSearchTags([]);
+    
+    // Update filters without the tags
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, []);
+    onFilterChange(newFilters);
+  }
 
-          {/* Clear Filters Button */}
-          {(keyword || source !== 'all' || sentiment !== 'all') && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleClearFilters} 
-              className="ml-auto h-7 text-xs px-2.5"
+  return (
+    <div className="space-y-4">
+      <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
+        <div className="space-y-4">
+          {/* Date Range Quick Buttons - Moved to top */}
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              variant={isLastXDays(date, 30) ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => handleQuickDateSelect(30)}
             >
-              Clear Filters
-              <X className="ml-1 h-3 w-3" />
+              Last 30 days
             </Button>
+            <Button
+              variant={isLastXDays(date, 90) ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => handleQuickDateSelect(90)}
+            >
+              Last 90 days
+            </Button>
+            <Button
+              variant={isLastYear(date) ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => handleQuickDateSelect(365)}
+            >
+              Last year
+            </Button>
+            <Button
+              variant={isAllTime(date) ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => handleQuickDateSelect(null)}
+            >
+              All time
+            </Button>
+
+            {/* Clear Filters Button */}
+            {(searchTags.length > 0 || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleClearFilters} 
+                className="ml-auto h-7 text-xs px-2.5"
+              >
+                Clear Filters
+                <X className="ml-1 h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* Single row layout with all filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
+            {/* Start Date */}
+            <div>
+              <Label htmlFor="start-date" className="text-xs">Start Date</Label>
+              <div className="flex items-center mt-1">
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={date?.from ? format(date.from, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const fromDate = newValue ? parseISO(newValue) : new Date(2000, 0, 1);
+                    const toDate = date?.to || new Date();
+                    handleDateChange({ from: fromDate, to: toDate });
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* End Date */}
+            <div>
+              <Label htmlFor="end-date" className="text-xs">End Date</Label>
+              <div className="flex items-center mt-1">
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={date?.to ? format(date.to, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const toDate = newValue ? parseISO(newValue) : new Date();
+                    const fromDate = date?.from || new Date(2000, 0, 1);
+                    handleDateChange({ from: fromDate, to: toDate });
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Monitoring Keyword Dropdown - Replaced keyword input */}
+            <div>
+              <Label htmlFor="monitoring-keyword" className="text-xs">Monitoring Keyword</Label>
+              <Select value={selectedKeyword} onValueChange={handleSelectedKeywordChange}>
+                <SelectTrigger id="monitoring-keyword" className="mt-1 w-full">
+                  <SelectValue placeholder="All Keywords" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONITORING_KEYWORDS.map((kw) => (
+                    <SelectItem key={kw} value={kw}>
+                      {kw}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Source Filter */}
+            <div>
+              <Label htmlFor="source" className="text-xs">Source</Label>
+              <Select value={source} onValueChange={handleSourceChange}>
+                <SelectTrigger id="source" className="mt-1 w-full">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  {availableSources.map((src) => (
+                    <SelectItem key={src} value={src}>
+                      {src}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sentiment Filter */}
+            <div>
+              <Label htmlFor="sentiment" className="text-xs">Sentiment</Label>
+              <Select 
+                value={sentiment} 
+                onValueChange={handleSentimentChange}
+              >
+                <SelectTrigger id="sentiment" className="mt-1 w-full">
+                  <SelectValue placeholder="All Sentiments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sentiments</SelectItem>
+                  <SelectItem value="Positive">Positive</SelectItem>
+                  <SelectItem value="Neutral">Neutral</SelectItem>
+                  <SelectItem value="Negative">Negative</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Active Filters */}
+          {(selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {selectedKeyword !== 'all keywords' && (
+                <Badge variant="outline" className="px-3 py-1">
+                  Keyword: {selectedKeyword}
+                  <button
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={handleClearSelectedKeyword}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+
+              {source !== 'all' && (
+                <Badge variant="outline" className="px-3 py-1">
+                  Source: {source}
+                  <button
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={handleClearSource}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+
+              {sentiment !== 'all' && (
+                <Badge variant="outline" className="px-3 py-1">
+                  Sentiment: {sentiment}
+                  <button
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={handleClearSentiment}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+            </div>
           )}
         </div>
-
-        {/* Single row layout with all filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
-          {/* Start Date */}
-          <div>
-            <Label htmlFor="start-date" className="text-xs">Start Date</Label>
-            <div className="flex items-center mt-1">
-              <Input
-                id="start-date"
-                type="date"
-                value={date?.from ? format(date.from, 'yyyy-MM-dd') : ''}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  const fromDate = newValue ? parseISO(newValue) : new Date(2000, 0, 1);
-                  const toDate = date?.to || new Date();
-                  handleDateChange({ from: fromDate, to: toDate });
-                }}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* End Date */}
-          <div>
-            <Label htmlFor="end-date" className="text-xs">End Date</Label>
-            <div className="flex items-center mt-1">
-              <Input
-                id="end-date"
-                type="date"
-                value={date?.to ? format(date.to, 'yyyy-MM-dd') : ''}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  const toDate = newValue ? parseISO(newValue) : new Date();
-                  const fromDate = date?.from || new Date(2000, 0, 1);
-                  handleDateChange({ from: fromDate, to: toDate });
-                }}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Keyword Filter */}
-          <div>
-            <Label htmlFor="keyword" className="text-xs">Keyword</Label>
-            <Input
-              id="keyword"
-              placeholder="Search by keyword"
-              value={keyword}
-              onChange={handleKeywordChange}
-              className="mt-1 w-full"
-            />
-          </div>
-
-          {/* Source Filter */}
-          <div>
-            <Label htmlFor="source" className="text-xs">Source</Label>
-            <Select value={source} onValueChange={handleSourceChange}>
-              <SelectTrigger id="source" className="mt-1 w-full">
-                <SelectValue placeholder="All Sources" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
-                {availableSources.map((src) => (
-                  <SelectItem key={src} value={src}>
-                    {src}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Sentiment Filter */}
-          <div>
-            <Label htmlFor="sentiment" className="text-xs">Sentiment</Label>
-            <Select 
-              value={sentiment} 
-              onValueChange={handleSentimentChange}
-            >
-              <SelectTrigger id="sentiment" className="mt-1 w-full">
-                <SelectValue placeholder="All Sentiments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sentiments</SelectItem>
-                <SelectItem value="Positive">Positive</SelectItem>
-                <SelectItem value="Neutral">Neutral</SelectItem>
-                <SelectItem value="Negative">Negative</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Active Filters */}
-        {(keyword || source !== 'all' || sentiment !== 'all') && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {keyword && (
-              <Badge variant="outline" className="px-3 py-1">
-                Keyword: {keyword}
-                <button
-                  className="ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={handleClearKeyword}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-
-            {source !== 'all' && (
-              <Badge variant="outline" className="px-3 py-1">
-                Source: {source}
-                <button
-                  className="ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={handleClearSource}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-
-            {sentiment !== 'all' && (
-              <Badge variant="outline" className="px-3 py-1">
-                Sentiment: {sentiment}
-                <button
-                  className="ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={handleClearSentiment}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Keyword Search Field - Moved below filter bar */}
+      <Card className="bg-card border rounded-lg w-full">
+        <CardContent className="p-3 sm:p-4">
+          <div className="relative">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="keyword-search" className="text-xs">Search by keyword</Label>
+              {searchTags.length > 0 && (
+                <button 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={handleClearAllSearchTags}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <div className="flex items-center flex-wrap gap-1 mt-1 p-1 border rounded-md bg-background">
+              <Input
+                id="keyword-search"
+                placeholder={searchTags.length > 0 ? "" : "Enter search term..."}
+                value={keyword}
+                onChange={handleKeywordChange}
+                onKeyDown={handleKeywordKeyPress}
+                className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-1"
+              />
+              {searchTags.map((tag, index) => (
+                <Badge 
+                  key={`inline-tag-${index}`} 
+                  variant="secondary" 
+                  className="px-2 py-0.5 h-7 flex items-center gap-1 whitespace-nowrap"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRemoveSearchTag(tag)}
+                    aria-label={`Remove ${tag} tag`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

@@ -28,6 +28,7 @@ export class ArticlesApi {
       if (filters.keyword) params.keyword = filters.keyword;
       if (filters.source) params.source = filters.source;
       if (filters.sentiment) params.sentiment = filters.sentiment;
+      if (filters.tag) params.tag = filters.tag;
     }
     
     const response = await apiClient.get<Article[]>('/articles', params);

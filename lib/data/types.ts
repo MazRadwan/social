@@ -43,6 +43,7 @@ export interface FilterOptions {
   keyword?: string;
   source?: string;
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
+  tag?: string;
   _forceUpdate?: number;
 }
 
