@@ -30,6 +30,7 @@ const MONITORING_KEYWORDS = [
 
 export function FilterBar({ onFilterChange, availableSources, initialFilters }: FilterBarProps) {
   const [keyword, setKeyword] = useState<string>(initialFilters?.keyword || '')
+  const [searchTags, setSearchTags] = useState<string[]>([])
   const [selectedKeyword, setSelectedKeyword] = useState<string>("all keywords")
   const [source, setSource] = useState<string>(initialFilters?.source || 'all')
   const [sentiment, setSentiment] = useState<'Positive' | 'Neutral' | 'Negative' | 'all'>(
@@ -42,13 +43,21 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     }
   )
 
+  // Initialize searchTags from initialFilters if keyword exists
+  useEffect(() => {
+    if (initialFilters?.keyword) {
+      setSearchTags([initialFilters.keyword]);
+    }
+  }, [initialFilters]);
+
   // Helper function to create filters with the current state
   const createFilters = (
-    currentKeyword = keyword,
+    currentKeyword = '',
     currentSource = source,
     currentSentiment = sentiment,
     currentDate = date,
-    currentSelectedKeyword = selectedKeyword
+    currentSelectedKeyword = selectedKeyword,
+    currentSearchTags = searchTags
   ): FilterOptions => {
     // Create fresh date objects
     const fromDate = currentDate?.from ? new Date(currentDate.from.getTime()) : new Date(2000, 0, 1);
@@ -65,7 +74,14 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     };
     
     // Add optional filters
-    if (currentKeyword) filters.keyword = currentKeyword;
+    // If we have search tags, join them with OR for keyword search
+    if (currentSearchTags.length > 0) {
+      // Each term should be searched independently
+      filters.keyword = currentSearchTags.join(' OR ');
+    } else if (currentKeyword) {
+      filters.keyword = currentKeyword;
+    }
+    
     if (currentSource !== 'all') filters.source = currentSource;
     if (currentSentiment !== 'all') filters.sentiment = currentSentiment;
     if (currentSelectedKeyword !== 'all keywords') filters.tag = currentSelectedKeyword;
@@ -78,24 +94,54 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     const newKeyword = e.target.value;
     setKeyword(newKeyword);
     
-    const newFilters = createFilters(newKeyword, source, sentiment, date, selectedKeyword);
-    console.log('Updating filters with keyword:', newFilters);
+    // We don't update filters immediately on change anymore
+    // Only update when Enter is pressed or when the keyword is cleared
+    if (newKeyword === '') {
+      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
+      onFilterChange(newFilters);
+    }
+  }
+
+  // Handle Enter key press in the keyword search field
+  const handleKeywordKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && keyword.trim()) {
+      e.preventDefault();
+      
+      // Add to search tags
+      const newSearchTags = [...searchTags, keyword.trim()];
+      setSearchTags(newSearchTags);
+      
+      // Create filters with the updated search tags
+      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
+      console.log('Search submitted with keyword tags:', newSearchTags);
+      onFilterChange(newFilters);
+      
+      // Clear the search input
+      setKeyword('');
+    }
+  }
+
+  // Handle removing a search tag
+  const handleRemoveSearchTag = (tagToRemove: string) => {
+    const newSearchTags = searchTags.filter(tag => tag !== tagToRemove);
+    setSearchTags(newSearchTags);
+    
+    // Update filters with the new tags
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
     onFilterChange(newFilters);
   }
 
   const handleSelectedKeywordChange = (value: string) => {
     setSelectedKeyword(value);
     
-    const newFilters = createFilters(keyword, source, sentiment, date, value);
-    console.log('Updating filters with selected keyword:', newFilters);
+    const newFilters = createFilters(keyword, source, sentiment, date, value, searchTags);
     onFilterChange(newFilters);
   }
 
   const handleSourceChange = (value: string) => {
     setSource(value);
     
-    const newFilters = createFilters(keyword, value, sentiment, date, selectedKeyword);
-    console.log('Updating filters with source:', newFilters);
+    const newFilters = createFilters(keyword, value, sentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -103,8 +149,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     const newSentiment = value as 'Positive' | 'Neutral' | 'Negative' | 'all';
     setSentiment(newSentiment);
     
-    const newFilters = createFilters(keyword, source, newSentiment, date, selectedKeyword);
-    console.log('Updating filters with sentiment:', newFilters);
+    const newFilters = createFilters(keyword, source, newSentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -135,14 +180,14 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(newRange);
     
     // Use helper to create filters
-    const newFilters = createFilters(keyword, source, sentiment, newRange, selectedKeyword);
-    console.log('Updating filters with date range:', newFilters);
+    const newFilters = createFilters(keyword, source, sentiment, newRange, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
   // Clear all filters
   const handleClearFilters = () => {
     setKeyword('');
+    setSearchTags([]);
     setSelectedKeyword('all keywords');
     setSource('all');
     setSentiment('all');
@@ -156,33 +201,32 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(allTimeRange);
     
     // Create empty filters with just date range
-    const newFilters = createFilters('', 'all', 'all', allTimeRange, 'all keywords');
-    console.log('Clearing all filters:', newFilters);
+    const newFilters = createFilters('', 'all', 'all', allTimeRange, 'all keywords', []);
     onFilterChange(newFilters);
   }
 
   // Badge clear button handlers
   const handleClearKeyword = () => {
     setKeyword('');
-    const newFilters = createFilters('', source, sentiment, date, selectedKeyword);
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
   const handleClearSelectedKeyword = () => {
     setSelectedKeyword('all keywords');
-    const newFilters = createFilters(keyword, source, sentiment, date, 'all keywords');
+    const newFilters = createFilters(keyword, source, sentiment, date, 'all keywords', searchTags);
     onFilterChange(newFilters);
   }
 
   const handleClearSource = () => {
     setSource('all');
-    const newFilters = createFilters(keyword, 'all', sentiment, date, selectedKeyword);
+    const newFilters = createFilters(keyword, 'all', sentiment, date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
   const handleClearSentiment = () => {
     setSentiment('all');
-    const newFilters = createFilters(keyword, source, 'all', date, selectedKeyword);
+    const newFilters = createFilters(keyword, source, 'all', date, selectedKeyword, searchTags);
     onFilterChange(newFilters);
   }
 
@@ -266,6 +310,15 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     return isStartAllTime && isEndRecent;
   };
 
+  // Handle removing all search tags at once
+  const handleClearAllSearchTags = () => {
+    setSearchTags([]);
+    
+    // Update filters without the tags
+    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, []);
+    onFilterChange(newFilters);
+  }
+
   return (
     <div className="space-y-4">
       <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
@@ -306,7 +359,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
             </Button>
 
             {/* Clear Filters Button */}
-            {(keyword || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+            {(searchTags.length > 0 || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -415,20 +468,8 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
           </div>
 
           {/* Active Filters */}
-          {(keyword || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+          {(selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {keyword && (
-                <Badge variant="outline" className="px-3 py-1">
-                  Search: {keyword}
-                  <button
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={handleClearKeyword}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-
               {selectedKeyword !== 'all keywords' && (
                 <Badge variant="outline" className="px-3 py-1">
                   Keyword: {selectedKeyword}
@@ -472,15 +513,41 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       {/* Keyword Search Field - Moved below filter bar */}
       <Card className="bg-card border rounded-lg w-full">
         <CardContent className="p-3 sm:p-4">
-          <div>
-            <Label htmlFor="keyword-search" className="text-xs">Search by keyword</Label>
-            <Input
-              id="keyword-search"
-              placeholder="Enter search term..."
-              value={keyword}
-              onChange={handleKeywordChange}
-              className="mt-1 w-full"
-            />
+          <div className="relative">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="keyword-search" className="text-xs">Search by keyword</Label>
+              {searchTags.length > 0 && (
+                <button 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={handleClearAllSearchTags}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <div className="flex items-center flex-wrap gap-1 mt-1 p-1 border rounded-md bg-background">
+              <Input
+                id="keyword-search"
+                placeholder={searchTags.length > 0 ? "" : "Enter search term..."}
+                value={keyword}
+                onChange={handleKeywordChange}
+                onKeyDown={handleKeywordKeyPress}
+                className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-1"
+              />
+              {searchTags.map((tag, index) => (
+                <Badge key={`inline-tag-${index}`} variant="secondary" className="px-2 py-0.5 h-7 flex items-center gap-1">
+                  {tag}
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRemoveSearchTag(tag)}
+                    aria-label={`Remove ${tag} tag`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

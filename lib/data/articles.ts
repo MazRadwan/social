@@ -44,15 +44,28 @@ class ArticleService {
         }
       }
       
-      // Filter by keyword/tag
+      // Filter by keyword (handling multiple terms with OR logic)
       if (options.keyword) {
-        const keyword = options.keyword.toLowerCase();
-        const hasKeyword = 
-          article.title.toLowerCase().includes(keyword) ||
-          article.content.toLowerCase().includes(keyword) ||
-          (article.tags && article.tags.some(tag => tag && tag.toLowerCase().includes(keyword)));
-        
-        if (!hasKeyword) return false;
+        if (options.keyword.includes(' OR ')) {
+          // Split by OR and check if ANY of the keywords match (inclusive search)
+          const keywords = options.keyword.split(' OR ').map(term => term.trim().toLowerCase());
+          const hasAnyKeyword = keywords.some(keyword => 
+            article.title.toLowerCase().includes(keyword) ||
+            article.content.toLowerCase().includes(keyword) ||
+            (article.tags && article.tags.some(tag => tag && tag.toLowerCase().includes(keyword)))
+          );
+          
+          if (!hasAnyKeyword) return false;
+        } else {
+          // Single keyword search
+          const keyword = options.keyword.toLowerCase();
+          const hasKeyword = 
+            article.title.toLowerCase().includes(keyword) ||
+            article.content.toLowerCase().includes(keyword) ||
+            (article.tags && article.tags.some(tag => tag && tag.toLowerCase().includes(keyword)));
+          
+          if (!hasKeyword) return false;
+        }
       }
       
       // Filter by specific tag
