@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       to: new Date(),
     }
   )
+  const [filtersExpanded, setFiltersExpanded] = useState<boolean>(false)
 
   // Initialize searchTags from initialFilters if keyword exists
   useEffect(() => {
@@ -331,196 +332,212 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     onFilterChange(newFilters);
   }
 
+  // Toggle filters expanded/collapsed state
+  const toggleFilters = () => {
+    setFiltersExpanded(!filtersExpanded);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
-        <div className="space-y-4">
-          {/* Date Range Quick Buttons - Moved to top */}
-          <div className="flex flex-wrap gap-1.5">
-            <Button
-              variant={isLastXDays(date, 30) ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs px-2.5"
-              onClick={() => handleQuickDateSelect(30)}
-            >
-              Last 30 days
-            </Button>
-            <Button
-              variant={isLastXDays(date, 90) ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs px-2.5"
-              onClick={() => handleQuickDateSelect(90)}
-            >
-              Last 90 days
-            </Button>
-            <Button
-              variant={isLastYear(date) ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs px-2.5"
-              onClick={() => handleQuickDateSelect(365)}
-            >
-              Last year
-            </Button>
-            <Button
-              variant={isAllTime(date) ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs px-2.5"
-              onClick={() => handleQuickDateSelect(null)}
-            >
-              All time
-            </Button>
-
-            {/* Clear Filters Button */}
-            {(searchTags.length > 0 || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleClearFilters} 
-                className="ml-auto h-7 text-xs px-2.5"
+      <Card className="bg-card border rounded-lg w-full">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                variant={isLastXDays(date, 30) ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2.5"
+                onClick={() => handleQuickDateSelect(30)}
               >
-                Clear Filters
-                <X className="ml-1 h-3 w-3" />
+                Last 30 days
               </Button>
-            )}
-          </div>
-
-          {/* Single row layout with all filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
-            {/* Start Date */}
-            <div>
-              <Label htmlFor="start-date" className="text-xs">Start Date</Label>
-              <div className="flex items-center mt-1">
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={date?.from ? format(date.from, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    const fromDate = newValue ? parseISO(newValue) : new Date(2000, 0, 1);
-                    const toDate = date?.to || new Date();
-                    handleDateChange({ from: fromDate, to: toDate });
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            {/* End Date */}
-            <div>
-              <Label htmlFor="end-date" className="text-xs">End Date</Label>
-              <div className="flex items-center mt-1">
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={date?.to ? format(date.to, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    const toDate = newValue ? parseISO(newValue) : new Date();
-                    const fromDate = date?.from || new Date(2000, 0, 1);
-                    handleDateChange({ from: fromDate, to: toDate });
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            {/* Monitoring Keyword Dropdown - Replaced keyword input */}
-            <div>
-              <Label htmlFor="monitoring-keyword" className="text-xs">Monitoring Keyword</Label>
-              <Select value={selectedKeyword} onValueChange={handleSelectedKeywordChange}>
-                <SelectTrigger id="monitoring-keyword" className="mt-1 w-full">
-                  <SelectValue placeholder="All Keywords" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONITORING_KEYWORDS.map((kw) => (
-                    <SelectItem key={kw} value={kw}>
-                      {kw}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Source Filter */}
-            <div>
-              <Label htmlFor="source" className="text-xs">Source</Label>
-              <Select value={source} onValueChange={handleSourceChange}>
-                <SelectTrigger id="source" className="mt-1 w-full">
-                  <SelectValue placeholder="All Sources" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  {availableSources.map((src) => (
-                    <SelectItem key={src} value={src}>
-                      {src}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Sentiment Filter */}
-            <div>
-              <Label htmlFor="sentiment" className="text-xs">Sentiment</Label>
-              <Select 
-                value={sentiment} 
-                onValueChange={handleSentimentChange}
+              <Button
+                variant={isLastXDays(date, 90) ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2.5"
+                onClick={() => handleQuickDateSelect(90)}
               >
-                <SelectTrigger id="sentiment" className="mt-1 w-full">
-                  <SelectValue placeholder="All Sentiments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sentiments</SelectItem>
-                  <SelectItem value="Positive">Positive</SelectItem>
-                  <SelectItem value="Neutral">Neutral</SelectItem>
-                  <SelectItem value="Negative">Negative</SelectItem>
-                </SelectContent>
-              </Select>
+                Last 90 days
+              </Button>
+              <Button
+                variant={isLastYear(date) ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2.5"
+                onClick={() => handleQuickDateSelect(365)}
+              >
+                Last year
+              </Button>
+              <Button
+                variant={isAllTime(date) ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2.5"
+                onClick={() => handleQuickDateSelect(null)}
+              >
+                All time
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Clear Filters Button */}
+              {(searchTags.length > 0 || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleClearFilters} 
+                  className="h-7 text-xs px-2.5"
+                >
+                  Clear Filters
+                  <X className="ml-1 h-3 w-3" />
+                </Button>
+              )}
+              
+              {/* Toggle Expand/Collapse Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleFilters}
+                className="h-7 w-7 p-0"
+                aria-label={filtersExpanded ? "Collapse filters" : "Expand filters"}
+              >
+                {filtersExpanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
-
-          {/* Active Filters */}
-          {(selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {selectedKeyword !== 'all keywords' && (
-                <Badge variant="outline" className="px-3 py-1">
-                  Keyword: {selectedKeyword}
-                  <button
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={handleClearSelectedKeyword}
+          
+          {/* Collapsible content */}
+          {filtersExpanded && (
+            <div className="space-y-4">
+              {/* Single row layout with all filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
+                {/* Start Date Input */}
+                <div>
+                  <Label htmlFor="start-date" className="text-xs">Start Date</Label>
+                  <DateRangePicker
+                    dateRange={date}
+                    onDateRangeChange={handleDateChange}
+                    className="mt-1 w-full"
+                  />
+                </div>
+                
+                {/* End Date Input */}
+                <div>
+                  <Label htmlFor="end-date" className="text-xs">End Date</Label>
+                  <DateRangePicker
+                    dateRange={date}
+                    onDateRangeChange={handleDateChange}
+                    className="mt-1 w-full"
+                  />
+                </div>
+                
+                {/* Monitoring Keyword Dropdown */}
+                <div>
+                  <Label htmlFor="monitoring-keyword" className="text-xs">Monitoring Keyword</Label>
+                  <Select 
+                    value={selectedKeyword} 
+                    onValueChange={handleSelectedKeywordChange}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-
-              {source !== 'all' && (
-                <Badge variant="outline" className="px-3 py-1">
-                  Source: {source}
-                  <button
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={handleClearSource}
+                    <SelectTrigger id="monitoring-keyword" className="mt-1 w-full">
+                      <SelectValue placeholder="Select keyword" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONITORING_KEYWORDS.map((keyword) => (
+                        <SelectItem key={keyword} value={keyword}>
+                          {keyword}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Source Dropdown */}
+                <div>
+                  <Label htmlFor="source" className="text-xs">Source</Label>
+                  <Select 
+                    value={source} 
+                    onValueChange={handleSourceChange}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-
-              {sentiment !== 'all' && (
-                <Badge variant="outline" className="px-3 py-1">
-                  Sentiment: {sentiment}
-                  <button
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={handleClearSentiment}
+                    <SelectTrigger id="source" className="mt-1 w-full">
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      {availableSources.map((source) => (
+                        <SelectItem key={source} value={source}>
+                          {source}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Sentiment Dropdown */}
+                <div>
+                  <Label htmlFor="sentiment" className="text-xs">Sentiment</Label>
+                  <Select 
+                    value={sentiment} 
+                    onValueChange={handleSentimentChange}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
+                    <SelectTrigger id="sentiment" className="mt-1 w-full">
+                      <SelectValue placeholder="Select sentiment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sentiments</SelectItem>
+                      <SelectItem value="Positive">Positive</SelectItem>
+                      <SelectItem value="Neutral">Neutral</SelectItem>
+                      <SelectItem value="Negative">Negative</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Active Filters */}
+              {(selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {selectedKeyword !== 'all keywords' && (
+                    <Badge variant="outline" className="px-3 py-1">
+                      Keyword: {selectedKeyword}
+                      <button
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                        onClick={handleClearSelectedKeyword}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {source !== 'all' && (
+                    <Badge variant="outline" className="px-3 py-1">
+                      Source: {source}
+                      <button
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                        onClick={handleClearSource}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {sentiment !== 'all' && (
+                    <Badge variant="outline" className="px-3 py-1">
+                      Sentiment: {sentiment}
+                      <button
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                        onClick={handleClearSentiment}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                </div>
               )}
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Keyword Search Field - Moved below filter bar */}
       <Card className="bg-card border rounded-lg w-full">
