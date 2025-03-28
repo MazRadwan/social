@@ -271,6 +271,10 @@ export default function DashboardPage() {
                     <div className="grid gap-4 sm:gap-6 grid-cols-1">
                       <MetricsOverview 
                         totalMentions={sentimentSummary.total || 0} 
+                        positiveMentions={sentimentSummary.positive || 0}
+                        negativeMentions={sentimentSummary.negative || 0}
+                        sentimentScore={sentimentSummary.total > 0 ? 
+                          ((sentimentSummary.positive - sentimentSummary.negative) / sentimentSummary.total) : 0}
                         loading={sentimentLoading}
                         dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
                       />
