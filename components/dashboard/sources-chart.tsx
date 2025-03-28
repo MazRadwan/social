@@ -27,20 +27,36 @@ export function SourcesChart({
   }, [sourcesData])
 
   const getSourceColor = (source: string, index: number) => {
+    // Color palette that works well in both dark and light themes
     const colors = [
-      'hsl(210, 100%, 59%)', // X/Twitter - Blue
-      'hsl(220, 46%, 48%)',  // Facebook - Dark Blue
-      'hsl(330, 100%, 59%)', // Instagram - Pink
-      'hsl(20, 100%, 59%)',  // Reddit - Orange
-      'hsl(180, 5%, 52%)',   // Other - Gray
+      'hsl(200, 70%, 50%)',    // Blue
+      'hsl(50, 90%, 55%)',     // Yellow (for Google)
+      'hsl(350, 70%, 60%)',    // Red/Pink
+      'hsl(30, 90%, 60%)',     // Orange
+      'hsl(265, 60%, 60%)',    // Purple
+      'hsl(180, 70%, 45%)',    // Teal
+      'hsl(35, 90%, 55%)',     // Amber
+      'hsl(300, 60%, 60%)',    // Magenta
+      'hsl(230, 70%, 70%)',    // Light Blue
+      'hsl(120, 50%, 50%)',    // Lime
+      'hsl(0, 0%, 60%)'        // Gray (for fallback)
     ]
     
+    // Map common sources to specific colors for consistency
     const lowerSource = source.toLowerCase()
-    if (lowerSource.includes('twitter') || lowerSource.includes('x/twitter')) return colors[0]
-    if (lowerSource.includes('facebook')) return colors[1]
-    if (lowerSource.includes('instagram')) return colors[2]
-    if (lowerSource.includes('reddit')) return colors[3]
-    return colors[4] // Other
+    if (lowerSource.includes('web') || lowerSource.includes('scraping')) return colors[0]
+    if (lowerSource.includes('google')) return colors[1]
+    if (lowerSource.includes('reddit')) return colors[2]
+    if (lowerSource.includes('rss') || lowerSource.includes('feed')) return colors[3]
+    if (lowerSource.includes('toronto') || lowerSource.includes('condo')) return colors[4]
+    if (lowerSource.includes('twitter') || lowerSource.includes('x')) return colors[5]
+    if (lowerSource.includes('facebook')) return colors[6]
+    if (lowerSource.includes('instagram')) return colors[7]
+    if (lowerSource.includes('linkedin')) return colors[8]
+    if (lowerSource.includes('news')) return colors[9]
+    
+    // For other sources, cycle through colors based on index
+    return colors[index % (colors.length - 1)] || colors[10]
   }
 
   // Custom tooltip formatter

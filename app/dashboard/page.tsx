@@ -165,7 +165,7 @@ export default function DashboardPage() {
         <div className="flex min-h-screen w-full bg-background dark:bg-[#050614]">
           <Sidebar>
             <SidebarHeader className="flex h-14 items-center border-b px-4 md:px-6">
-              <div className="flex items-center gap-2 font-semibold">
+              <div className="flex items-center gap-2 font-semibold pt-4">
                 <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-xs">SL</span>
                 </div>
@@ -271,6 +271,10 @@ export default function DashboardPage() {
                     <div className="grid gap-4 sm:gap-6 grid-cols-1">
                       <MetricsOverview 
                         totalMentions={sentimentSummary.total || 0} 
+                        positiveMentions={sentimentSummary.positive || 0}
+                        negativeMentions={sentimentSummary.negative || 0}
+                        sentimentScore={sentimentSummary.total > 0 ? 
+                          ((sentimentSummary.positive - sentimentSummary.negative) / sentimentSummary.total) : 0}
                         loading={sentimentLoading}
                         dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
                       />

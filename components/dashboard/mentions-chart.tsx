@@ -86,7 +86,7 @@ export function MentionsChart({
                     type="monotone"
                     dataKey="count"
                     name="Mentions"
-                    stroke="hsl(var(--primary))"
+                    stroke="hsl(210, 100%, 75%)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
@@ -109,8 +109,8 @@ export function MentionsChart({
                     type="monotone"
                     dataKey="count"
                     name="Mentions"
-                    stroke="hsl(var(--primary))"
-                    fill="hsl(var(--primary) / 0.2)"
+                    stroke="hsl(210, 100%, 75%)"
+                    fill="hsl(210, 100%, 75%, 0.2)"
                   />
                 </AreaChart>
               )}
