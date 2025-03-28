@@ -118,6 +118,7 @@ export function useArticles(initialFilters?: FilterOptions) {
           
           if (preparedFilters?.keyword) {
             params.set('keyword', preparedFilters.keyword);
+            console.log('Setting keyword parameter:', preparedFilters.keyword);
           }
           
           if (preparedFilters?.source && preparedFilters.source !== 'all') {
@@ -126,11 +127,15 @@ export function useArticles(initialFilters?: FilterOptions) {
           
           if (preparedFilters?.sentiment) {
             // Only filter if this is a valid sentiment value (Positive, Neutral, Negative)
-            // The type in FilterOptions doesn't include 'all', but we need to handle it in the UI
+            // The 'all' value might be used in the UI but shouldn't be sent to the API
             const validSentiments: string[] = ['Positive', 'Neutral', 'Negative'];
             if (validSentiments.includes(preparedFilters.sentiment)) {
               params.set('sentiment', preparedFilters.sentiment);
             }
+          }
+          
+          if (preparedFilters?.tag && preparedFilters.tag !== 'all keywords') {
+            params.set('tag', preparedFilters.tag);
           }
           
           const queryString = params.toString();

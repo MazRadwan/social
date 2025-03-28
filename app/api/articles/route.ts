@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     const keyword = searchParams.get('keyword');
     if (keyword) {
       filterOptions.keyword = keyword;
+      console.log('API received keyword search:', keyword);
     }
     
     // Source filter
@@ -39,6 +40,12 @@ export async function GET(request: Request) {
     const sentiment = searchParams.get('sentiment');
     if (sentiment && sentiment !== 'all') {
       filterOptions.sentiment = sentiment as 'Positive' | 'Neutral' | 'Negative';
+    }
+    
+    // Tag filter
+    const tag = searchParams.get('tag');
+    if (tag && tag !== 'all keywords') {
+      filterOptions.tag = tag;
     }
     
     console.log('GET API - Filter options:', filterOptions);
