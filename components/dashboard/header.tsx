@@ -4,6 +4,7 @@ import React from 'react'
 import { Save, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from './sidebar'
+import { ThemeToggle } from './theme-toggle'
 
 interface HeaderProps {
   activeTab: string
@@ -11,7 +12,7 @@ interface HeaderProps {
 
 export function Header({ activeTab }: HeaderProps) {
   return (
-    <div className="sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+    <div className="sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-md dark:border-border">
       <div className="flex h-14 items-center gap-4 px-6">
         <SidebarTrigger />
         <div className="flex items-center gap-2">
@@ -23,7 +24,8 @@ export function Header({ activeTab }: HeaderProps) {
             {activeTab === "settings" && "Settings"}
           </h1>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
           <div className="hidden md:flex items-center gap-2">
             <Button variant="outline" size="sm">
               <Save className="mr-2 h-3.5 w-3.5" />

@@ -162,7 +162,7 @@ export default function DashboardPage() {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background">
+        <div className="flex min-h-screen w-full bg-background dark:bg-[#050614]">
           <Sidebar>
             <SidebarHeader className="flex h-14 items-center border-b px-4 md:px-6">
               <div className="flex items-center gap-2 font-semibold">
@@ -229,7 +229,7 @@ export default function DashboardPage() {
             <Header activeTab={activeTab} />
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
-              <main className="p-3 sm:p-4 md:p-6 relative w-full">
+              <main className="p-4 sm:p-5 md:p-7 relative w-full">
                 {/* Dashboard Tooltips */}
                 {showTooltips && (
                   <>
@@ -249,7 +249,6 @@ export default function DashboardPage() {
                   <div className="grid gap-4 sm:gap-6 w-full">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
                         <div className="text-muted-foreground">
                           Monitoring keywords:{" "}
                           {tags?.slice(0, 3).map((tag) => (
