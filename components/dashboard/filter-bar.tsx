@@ -109,8 +109,11 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     if (e.key === 'Enter' && keyword.trim()) {
       e.preventDefault();
       
-      // Add to search tags
-      const newSearchTags = [...searchTags, keyword.trim()];
+      // Split the keyword by spaces and filter out empty strings
+      const newTerms = keyword.trim().split(/\s+/).filter(term => term && term !== 'OR');
+      
+      // Add each term as a separate tag
+      const newSearchTags = [...searchTags, ...newTerms];
       setSearchTags(newSearchTags);
       
       // Create filters with the updated search tags
@@ -326,35 +329,39 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-0">
               <Button
-                variant={isLastXDays(date, 30) ? "default" : "outline"}
+                variant="date-tab"
                 size="sm"
-                className="h-7 text-xs px-2.5"
+                className="flex-1 py-2 px-4 h-auto rounded-l-md"
+                data-state={isLastXDays(date, 30) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(30)}
               >
                 Last 30 days
               </Button>
               <Button
-                variant={isLastXDays(date, 90) ? "default" : "outline"}
+                variant="date-tab"
                 size="sm"
-                className="h-7 text-xs px-2.5"
+                className="flex-1 py-2 px-4 h-auto"
+                data-state={isLastXDays(date, 90) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(90)}
               >
                 Last 90 days
               </Button>
               <Button
-                variant={isLastYear(date) ? "default" : "outline"}
+                variant="date-tab"
                 size="sm"
-                className="h-7 text-xs px-2.5"
+                className="flex-1 py-2 px-4 h-auto"
+                data-state={isLastYear(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(365)}
               >
                 Last year
               </Button>
               <Button
-                variant={isAllTime(date) ? "default" : "outline"}
+                variant="date-tab"
                 size="sm"
-                className="h-7 text-xs px-2.5"
+                className="flex-1 py-2 px-4 h-auto rounded-r-md"
+                data-state={isAllTime(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(null)}
               >
                 All time
@@ -483,17 +490,47 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
 
       {/* Keyword Search Field */}
       <div className="bg-card border rounded-lg p-3 sm:p-4">
-        <Label htmlFor="search" className="text-xs">Search by keyword</Label>
-        <div className="flex items-center mt-1">
-          <Input
-            id="search"
-            type="text"
-            placeholder="Enter search term..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={handleKeywordKeyPress}
-            className="w-full"
-          />
+        <div className="flex items-center justify-between mb-2">
+          <Label htmlFor="keyword-search" className="text-xs">Search by keyword</Label>
+          {searchTags.length > 0 && (
+            <button 
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleClearAllSearchTags}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        <div className="flex items-center border rounded-md bg-background px-2">
+          <div className="flex-shrink h-9 min-w-[100px] w-auto">
+            <Input
+              id="keyword-search"
+              placeholder="Enter search term..."
+              value={keyword}
+              onChange={handleKeywordChange}
+              onKeyDown={handleKeywordKeyPress}
+              className="border-0 w-full h-9 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
+          <div className="flex-1 flex flex-wrap gap-1 py-1 pl-2">
+            {searchTags.map((tag, index) => (
+              <Badge 
+                key={`inline-tag-${index}`} 
+                variant="secondary" 
+                className="h-6 text-xs flex items-center gap-1 bg-muted"
+              >
+                {tag}
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => handleRemoveSearchTag(tag)}
+                  aria-label={`Remove ${tag} tag`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
     </div>

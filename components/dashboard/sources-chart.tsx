@@ -3,27 +3,22 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
+  PieChart,
+  Pie,
   ResponsiveContainer,
   Cell,
+  Tooltip
 } from 'recharts'
 import { ArticlesBySource } from '@/lib/data/types'
 
 interface SourcesChartProps {
   sourcesData: ArticlesBySource[] | null
   loading: boolean
-  direction?: 'vertical' | 'horizontal'
 }
 
 export function SourcesChart({
   sourcesData,
   loading,
-  direction = 'horizontal'
 }: SourcesChartProps) {
   // Format the data for the chart
   const chartData = useMemo(() => {
@@ -31,31 +26,34 @@ export function SourcesChart({
     return sourcesData
   }, [sourcesData])
 
-  // Generate colors for each bar
-  const colors = useMemo(() => {
-    if (!sourcesData) return []
-    const primaryBase = 'hsl(var(--primary))'
+  const getSourceColor = (source: string, index: number) => {
+    const colors = [
+      'hsl(210, 100%, 59%)', // X/Twitter - Blue
+      'hsl(220, 46%, 48%)',  // Facebook - Dark Blue
+      'hsl(330, 100%, 59%)', // Instagram - Pink
+      'hsl(20, 100%, 59%)',  // Reddit - Orange
+      'hsl(180, 5%, 52%)',   // Other - Gray
+    ]
     
-    // For a single source, just use the primary color
-    if (sourcesData.length === 1) {
-      return [primaryBase]
-    }
-    
-    // For multiple sources, create a gradient of colors
-    return Array(sourcesData.length).fill(0).map((_, i) => {
-      const opacity = 1 - (i * 0.5 / sourcesData.length)
-      return `hsl(var(--primary) / ${opacity})`
-    })
-  }, [sourcesData])
+    const lowerSource = source.toLowerCase()
+    if (lowerSource.includes('twitter') || lowerSource.includes('x/twitter')) return colors[0]
+    if (lowerSource.includes('facebook')) return colors[1]
+    if (lowerSource.includes('instagram')) return colors[2]
+    if (lowerSource.includes('reddit')) return colors[3]
+    return colors[4] // Other
+  }
 
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const totalCount = chartData.reduce((sum, item) => sum + item.count, 0);
+      const percentage = ((payload[0].value / totalCount) * 100).toFixed(1);
+      
       return (
-        <div className="bg-background border rounded-md shadow-md p-2 text-sm">
-          <p className="font-medium">{payload[0].payload.source}</p>
-          <p>
-            Mentions: <span className="font-medium">{payload[0].value}</span>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-2">
+          <p className="font-medium">{payload[0].name}</p>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold">{payload[0].value}</span> articles ({percentage}%)
           </p>
         </div>
       )
@@ -66,8 +64,8 @@ export function SourcesChart({
   return (
     <Card className="col-span-1">
       <CardHeader>
-        <CardTitle>Top Sources</CardTitle>
-        <CardDescription>Most frequent article sources</CardDescription>
+        <CardTitle>Source Breakdown</CardTitle>
+        <CardDescription>Article distribution by source</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -75,45 +73,43 @@ export function SourcesChart({
             <p className="text-muted-foreground">Loading sources data...</p>
           </div>
         ) : chartData.length > 0 ? (
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                layout={direction === 'horizontal' ? 'vertical' : 'horizontal'}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={direction !== 'horizontal'} />
-                {direction === 'horizontal' ? (
-                  <>
-                    <XAxis type="number" />
-                    <YAxis
-                      dataKey="source"
-                      type="category"
-                      tick={{ fontSize: 12 }}
-                      width={120}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <XAxis
-                      dataKey="source"
-                      tick={{ fontSize: 12 }}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={50}
-                    />
-                    <YAxis type="number" />
-                  </>
-                )}
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" name="Mentions">
-                  {chartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-[300px] flex flex-col items-center justify-center">
+            <div className="h-[200px] w-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={0}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="count"
+                    nameKey="source"
+                    stroke="none"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getSourceColor(entry.source, index)} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6">
+              {chartData.map((entry, index) => (
+                <div key={`legend-${index}`} className="flex items-center">
+                  <div 
+                    className="h-3 w-3 rounded-full mr-1" 
+                    style={{ backgroundColor: getSourceColor(entry.source, index) }}
+                  ></div>
+                  <span className="text-sm whitespace-nowrap">
+                    {entry.source} {Math.round((entry.count / chartData.reduce((sum, item) => sum + item.count, 0)) * 100)}%
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="h-[300px] flex items-center justify-center">

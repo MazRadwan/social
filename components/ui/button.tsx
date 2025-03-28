@@ -18,6 +18,10 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        tab: "border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:text-primary focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none",
+        "tab-negative": "border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:border-red-500 data-[state=active]:text-red-500 dark:data-[state=active]:border-red-400 dark:data-[state=active]:text-red-400 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none",
+        "tab-positive": "border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:border-teal-500 data-[state=active]:text-teal-500 dark:data-[state=active]:border-teal-400 dark:data-[state=active]:text-teal-400 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none",
+        "date-tab": "text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:font-medium dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-white dark:data-[state=active]:font-medium focus-visible:ring-0 focus-visible:ring-offset-0",
       },
       size: {
         default: "h-10 px-4 py-2",
