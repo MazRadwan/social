@@ -155,6 +155,7 @@ export default function DashboardPage() {
     if (newFilters.source) updatedFilters.source = newFilters.source;
     if (newFilters.sentiment) updatedFilters.sentiment = newFilters.sentiment;
     if (newFilters.tag) updatedFilters.tag = newFilters.tag;
+    if (newFilters.assigned_issue) updatedFilters.assigned_issue = newFilters.assigned_issue;
     
     console.log('Setting new filters with force update:', updatedFilters);
     

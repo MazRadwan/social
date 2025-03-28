@@ -44,6 +44,7 @@ export interface FilterOptions {
   source?: string;
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
   tag?: string;
+  assigned_issue?: string;
   _forceUpdate?: number;
 }
 
