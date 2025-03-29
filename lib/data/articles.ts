@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from './types';
 
 /**
@@ -68,7 +68,7 @@ class ArticleService {
       // Support for multiple sentiments
       if (options.sentiments && options.sentiments.length > 0 && article.sentiment_analysis && article.sentiment_analysis.length > 0) {
         const hasSentiment = article.sentiment_analysis.some(
-          analysis => options.sentiments!.includes(analysis.sentiment)
+          analysis => options.sentiments && options.sentiments.includes(analysis.sentiment)
         );
         if (!hasSentiment) return false;
       }
@@ -81,7 +81,7 @@ class ArticleService {
       // Support for multiple tags
       if (options.tags && options.tags.length > 0) {
         // If article has no tags or none of the requested tags, filter it out
-        if (!article.tags || !options.tags.some(tag => article.tags.includes(tag))) {
+        if (!article.tags || !options.tags.some((tag: string) => article.tags && article.tags.includes(tag))) {
           return false;
         }
       }

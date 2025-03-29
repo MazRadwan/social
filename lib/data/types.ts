@@ -42,9 +42,13 @@ export interface FilterOptions {
   };
   keyword?: string;
   source?: string;
+  sources?: string[];
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
+  sentiments?: ('Positive' | 'Neutral' | 'Negative')[];
   tag?: string;
+  tags?: string[];
   assigned_issue?: string;
+  assigned_issues?: string[];
   _forceUpdate?: number;
 }
 
