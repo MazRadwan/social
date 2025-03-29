@@ -1,46 +1,66 @@
 import { useState, useEffect, useRef } from 'react';
-import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from '@/lib/data/types';
+import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions, SentimentOverTime } from '@/lib/data/types';
 
-// Helper to deep compare objects - simplified to prioritize force updates
-const isEqual = (a: any, b: any): boolean => {
-  // Same reference = same object
-  if (a === b) return true;
-  
-  // If either is null/undefined but not both
+// Check if two filter options are equal
+function isEqual(a?: FilterOptions, b?: FilterOptions): boolean {
+  // Handle undefined cases
+  if (!a && !b) return true;
   if (!a || !b) return false;
-  
-  // Force update has highest priority - if either has a force update, they're different
+
+  // If either object has a forceUpdate flag, check if they differ
   if (a._forceUpdate || b._forceUpdate) {
-    return false;
+    return a._forceUpdate === b._forceUpdate;
   }
-  
-  // For date ranges, strictly compare the date values by time
+
+  // Check date ranges
   if (a.dateRange && b.dateRange) {
-    // If any date is missing in either object, they're different
-    if (!a.dateRange.from || !a.dateRange.to || !b.dateRange.from || !b.dateRange.to) {
-      return false;
-    }
-    
-    // Get timestamps for comparison
-    const aFrom = a.dateRange.from instanceof Date ? a.dateRange.from.getTime() : new Date(a.dateRange.from).getTime();
-    const aTo = a.dateRange.to instanceof Date ? a.dateRange.to.getTime() : new Date(a.dateRange.to).getTime();
-    const bFrom = b.dateRange.from instanceof Date ? b.dateRange.from.getTime() : new Date(b.dateRange.from).getTime();
-    const bTo = b.dateRange.to instanceof Date ? b.dateRange.to.getTime() : new Date(b.dateRange.to).getTime();
-    
-    // Dates must be exactly the same to be considered equal (not fuzzy/day-based comparison)
-    if (aFrom !== bFrom || aTo !== bTo) {
-      return false;
-    }
-  }
-  
-  // Check other filter properties (keyword, source, sentiment)
-  if (a.keyword !== b.keyword || a.source !== b.source || a.sentiment !== b.sentiment) {
+    if (a.dateRange.from?.getTime() !== b.dateRange.from?.getTime()) return false;
+    if (a.dateRange.to?.getTime() !== b.dateRange.to?.getTime()) return false;
+  } else if ((a.dateRange && !b.dateRange) || (!a.dateRange && b.dateRange)) {
     return false;
   }
+
+  // Check for all other filter properties
+  const allProperties = new Set([
+    ...Object.keys(a || {}),
+    ...Object.keys(b || {})
+  ]);
+
+  // Skip these properties as they're checked separately or ignored
+  const skipProperties = new Set(['dateRange', '_forceUpdate']);
   
-  // If we've passed all checks, objects are considered equal
+  for (const prop of allProperties) {
+    if (skipProperties.has(prop)) continue;
+    
+    const aValue = a[prop as keyof FilterOptions];
+    const bValue = b[prop as keyof FilterOptions];
+    
+    // If one has the property and the other doesn't
+    if ((aValue === undefined && bValue !== undefined) || 
+        (aValue !== undefined && bValue === undefined)) {
+      return false;
+    }
+    
+    // If both are arrays, check if they have the same content
+    if (Array.isArray(aValue) && Array.isArray(bValue)) {
+      if (aValue.length !== bValue.length) return false;
+      
+      // Sort arrays to ensure consistent comparison
+      const sortedA = [...aValue].sort();
+      const sortedB = [...bValue].sort();
+      
+      for (let i = 0; i < sortedA.length; i++) {
+        if (sortedA[i] !== sortedB[i]) return false;
+      }
+    } 
+    // For non-array values
+    else if (aValue !== bValue) {
+      return false;
+    }
+  }
+  
   return true;
-};
+}
 
 // Helper to ensure dates are properly serialized
 const prepareFiltersForAPI = (filters?: FilterOptions): FilterOptions | undefined => {
@@ -370,4 +390,135 @@ export function useMentionsOverTime(filters?: FilterOptions) {
   }, [filters]);
   
   return { mentions, loading, error };
+}
+
+// Hook for fetching top issues
+export function useTopIssues(filters?: FilterOptions, limit: number = 5) {
+  const [issues, setIssues] = useState<ArticlesByIssue[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const previousFiltersRef = useRef<FilterOptions | undefined>(filters);
+  const previousLimitRef = useRef<number>(limit);
+  const isFirstRenderRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    console.log("useTopIssues effect called with filters:", filters, "and limit:", limit);
+    console.log("useTopIssues comparing with previous filters:", previousFiltersRef.current);
+    
+    // Always fetch on first render or if filters/limit changed
+    if (isFirstRenderRef.current || !isEqual(filters, previousFiltersRef.current) || limit !== previousLimitRef.current) {
+      console.log("useTopIssues: fetching data due to changes or first render");
+      isFirstRenderRef.current = false;
+      previousFiltersRef.current = filters;
+      previousLimitRef.current = limit;
+      
+      const fetchIssues = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const preparedFilters = prepareFiltersForAPI(filters);
+          console.log("useTopIssues: prepared filters:", preparedFilters);
+          
+          // Add the action parameter to specify we want top issues
+          const requestBody: any = {
+            action: 'top_issues',
+            filters: preparedFilters,
+            limit
+          };
+          
+          console.log("useTopIssues: sending request with body:", requestBody);
+          
+          const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch top issues');
+          }
+          
+          const responseData = await response.json();
+          console.log("useTopIssues: received response:", responseData);
+          setIssues(responseData.data?.issues || []);
+        } catch (err) {
+          console.error("useTopIssues: error fetching data:", err);
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchIssues();
+    }
+  }, [filters, limit]);
+  
+  // Debug - log state on each render
+  useEffect(() => {
+    console.log("useTopIssues current state:", { issues, loading, error });
+  }, [issues, loading, error]);
+  
+  return { issues, loading, error };
+}
+
+// Hook for fetching sentiment data over time
+export function useSentimentOverTime(filters?: FilterOptions) {
+  const [sentimentData, setSentimentData] = useState<SentimentOverTime[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const previousFiltersRef = useRef<FilterOptions | undefined>(filters);
+  const isFirstRenderRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    // Always fetch on first render or if filters changed
+    if (isFirstRenderRef.current || !isEqual(filters, previousFiltersRef.current)) {
+      isFirstRenderRef.current = false;
+      previousFiltersRef.current = filters;
+      
+      console.log('Fetching sentiment over time with filters:', filters);
+    
+      const fetchSentimentOverTime = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const preparedFilters = prepareFiltersForAPI(filters);
+          
+          // Add the action parameter to specify we want sentiment over time
+          const requestBody: any = {
+            action: 'sentiment_over_time',
+            filters: preparedFilters
+          };
+          
+          const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch sentiment over time data');
+          }
+          
+          const responseData = await response.json();
+          console.log('Sentiment over time response:', responseData);
+          setSentimentData(responseData.data?.sentimentOverTime || []);
+        } catch (err) {
+          console.error('Error fetching sentiment over time:', err);
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchSentimentOverTime();
+    }
+  }, [filters]);
+  
+  return { sentimentData, loading, error };
 } 
