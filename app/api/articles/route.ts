@@ -95,6 +95,11 @@ export async function POST(request: Request) {
         filters.dateRange = { from: fromDate, to: toDate };
       }
       
+      // Handle keyword search from search bar
+      if (body.keyword && body.keyword !== null) {
+        filters.keyword = body.keyword;
+      }
+      
       // Handle single and multi-select filters
       if (body.tags && Array.isArray(body.tags) && body.tags.length > 0) {
         filters.tags = body.tags;

@@ -109,12 +109,10 @@ export default function DashboardPage() {
   const handleFilterChange = (newFilters: FilterOptions) => {
     console.log('Dashboard received new filters:', newFilters);
     
-    // Force immediate re-fetch with timestamp plus random value to ensure uniqueness
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 100000);
-    const forceUpdate = timestamp * 1000 + random;
+    // Force immediate re-fetch with timestamp
+    const forceUpdate = Date.now();
     
-    // Create a completely new filter object to avoid any reference issues
+    // Create a completely new filter object
     const updatedFilters: FilterOptions = {
       _forceUpdate: forceUpdate
     };
@@ -150,12 +148,44 @@ export default function DashboardPage() {
       };
     }
     
-    // Copy other filter properties
-    if (newFilters.keyword) updatedFilters.keyword = newFilters.keyword;
-    if (newFilters.source) updatedFilters.source = newFilters.source;
-    if (newFilters.sentiment) updatedFilters.sentiment = newFilters.sentiment;
-    if (newFilters.tag) updatedFilters.tag = newFilters.tag;
-    if (newFilters.assigned_issue) updatedFilters.assigned_issue = newFilters.assigned_issue;
+    // Process keyword - direct check for property existence
+    if ('keyword' in newFilters) {
+      // If keyword property exists in newFilters, use its value
+      if (newFilters.keyword !== undefined && newFilters.keyword !== null) {
+        updatedFilters.keyword = newFilters.keyword;
+      }
+      // If keyword is explicitly null or undefined, don't add it to updatedFilters
+      // This ensures the property is removed when Clear All is clicked
+      console.log('Keyword in newFilters:', newFilters.keyword);
+    } else if (filters.keyword) {
+      // Preserve existing keyword if not explicitly addressed in newFilters
+      updatedFilters.keyword = filters.keyword;
+    }
+    
+    // Process other filters using the same pattern
+    if ('source' in newFilters) {
+      if (newFilters.source !== undefined) updatedFilters.source = newFilters.source;
+    } else if (filters.source) {
+      updatedFilters.source = filters.source;
+    }
+    
+    if ('sentiment' in newFilters) {
+      if (newFilters.sentiment !== undefined) updatedFilters.sentiment = newFilters.sentiment;
+    } else if (filters.sentiment) {
+      updatedFilters.sentiment = filters.sentiment;
+    }
+    
+    if ('tag' in newFilters) {
+      if (newFilters.tag !== undefined) updatedFilters.tag = newFilters.tag;
+    } else if (filters.tag) {
+      updatedFilters.tag = filters.tag;
+    }
+    
+    if ('assigned_issue' in newFilters) {
+      if (newFilters.assigned_issue !== undefined) updatedFilters.assigned_issue = newFilters.assigned_issue;
+    } else if (filters.assigned_issue) {
+      updatedFilters.assigned_issue = filters.assigned_issue;
+    }
     
     console.log('Setting new filters with force update:', updatedFilters);
     

@@ -40,7 +40,7 @@ export interface FilterOptions {
     from: Date;
     to: Date;
   };
-  keyword?: string;
+  keyword?: string | null;
   source?: string;
   sources?: string[];
   sentiment?: 'Positive' | 'Neutral' | 'Negative';

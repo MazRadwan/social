@@ -46,6 +46,19 @@ class ArticleService {
         }
       }
       
+      // Keyword filter
+      if (options.keyword && options.keyword !== null) {
+        const keywords = options.keyword.split(' OR ').map(k => k.trim().toLowerCase());
+        const articleContent = (article.title + ' ' + article.content).toLowerCase();
+        
+        // Check if the article contains any of the keywords
+        const hasKeyword = keywords.some(keyword => 
+          articleContent.includes(keyword)
+        );
+        
+        if (!hasKeyword) return false;
+      }
+      
       // Source filter - can be single value or array
       if (options.source && article.source !== options.source) {
         return false;

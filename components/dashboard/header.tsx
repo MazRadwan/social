@@ -61,22 +61,71 @@ export function Header({ activeTab, onSearchChange, initialFilters }: HeaderProp
 
   // Handle removing a search tag
   const handleRemoveSearchTag = (tagToRemove: string) => {
+    // Remove the tag from the search tags array
     const newSearchTags = searchTags.filter(tag => tag !== tagToRemove);
     setSearchTags(newSearchTags);
     
-    // Update filters with the new tags
-    const keywordString = newSearchTags.length > 0 ? newSearchTags.join(' OR ') : '';
-    updateFilters(keywordString);
+    // Direct approach: create a completely new filter object
+    if (onSearchChange) {
+      // Create a new filters object with the force update timestamp
+      const newFilters: FilterOptions = {
+        _forceUpdate: Date.now(),
+      };
+      
+      // Only add keyword if we still have tags, otherwise set to null explicitly
+      if (newSearchTags.length > 0) {
+        newFilters.keyword = newSearchTags.join(' OR ');
+      } else {
+        // Use null instead of undefined to explicitly signal removal
+        newFilters.keyword = null;
+      }
+      
+      // Preserve the date range from initialFilters
+      if (initialFilters?.dateRange) {
+        newFilters.dateRange = {
+          from: new Date(initialFilters.dateRange.from.getTime()),
+          to: new Date(initialFilters.dateRange.to.getTime())
+        };
+      }
+      
+      console.log('Sending filter update from handleRemoveSearchTag:', newFilters);
+      
+      // Call the parent's filter change handler directly
+      onSearchChange(newFilters);
+    }
   }
 
   // Handle clearing all search tags
   const handleClearAllSearchTags = () => {
+    // Clear the search tags array
     setSearchTags([]);
-    updateFilters('');
+    
+    // Direct approach: create a completely new filter object
+    if (onSearchChange) {
+      // Create a new filters object with just the force update timestamp
+      const newFilters: FilterOptions = {
+        _forceUpdate: Date.now(),
+        // Use null instead of undefined to explicitly signal removal
+        keyword: null
+      };
+      
+      // Preserve the date range from initialFilters
+      if (initialFilters?.dateRange) {
+        newFilters.dateRange = {
+          from: new Date(initialFilters.dateRange.from.getTime()),
+          to: new Date(initialFilters.dateRange.to.getTime())
+        };
+      }
+      
+      console.log('Sending filter update from handleClearAllSearchTags:', newFilters);
+      
+      // Call the parent's filter change handler directly
+      onSearchChange(newFilters);
+    }
   }
 
   // Helper to update filters through the callback
-  const updateFilters = (keywordString: string) => {
+  const updateFilters = (keywordString: string, forceUpdate = false) => {
     if (!onSearchChange) return;
     
     // Create new filters object with only the force update timestamp
@@ -87,6 +136,9 @@ export function Header({ activeTab, onSearchChange, initialFilters }: HeaderProp
     // Add keyword if provided
     if (keywordString) {
       newFilters.keyword = keywordString;
+    } else if (forceUpdate) {
+      // Explicitly set keyword to undefined to remove it
+      newFilters.keyword = undefined;
     }
     
     // Explicitly preserve the date range if it exists in initialFilters
