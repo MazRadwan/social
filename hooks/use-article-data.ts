@@ -1,46 +1,66 @@
 import { useState, useEffect, useRef } from 'react';
 import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from '@/lib/data/types';
 
-// Helper to deep compare objects - simplified to prioritize force updates
-const isEqual = (a: any, b: any): boolean => {
-  // Same reference = same object
-  if (a === b) return true;
-  
-  // If either is null/undefined but not both
+// Check if two filter options are equal
+function isEqual(a?: FilterOptions, b?: FilterOptions): boolean {
+  // Handle undefined cases
+  if (!a && !b) return true;
   if (!a || !b) return false;
-  
-  // Force update has highest priority - if either has a force update, they're different
+
+  // If either object has a forceUpdate flag, check if they differ
   if (a._forceUpdate || b._forceUpdate) {
-    return false;
+    return a._forceUpdate === b._forceUpdate;
   }
-  
-  // For date ranges, strictly compare the date values by time
+
+  // Check date ranges
   if (a.dateRange && b.dateRange) {
-    // If any date is missing in either object, they're different
-    if (!a.dateRange.from || !a.dateRange.to || !b.dateRange.from || !b.dateRange.to) {
-      return false;
-    }
-    
-    // Get timestamps for comparison
-    const aFrom = a.dateRange.from instanceof Date ? a.dateRange.from.getTime() : new Date(a.dateRange.from).getTime();
-    const aTo = a.dateRange.to instanceof Date ? a.dateRange.to.getTime() : new Date(a.dateRange.to).getTime();
-    const bFrom = b.dateRange.from instanceof Date ? b.dateRange.from.getTime() : new Date(b.dateRange.from).getTime();
-    const bTo = b.dateRange.to instanceof Date ? b.dateRange.to.getTime() : new Date(b.dateRange.to).getTime();
-    
-    // Dates must be exactly the same to be considered equal (not fuzzy/day-based comparison)
-    if (aFrom !== bFrom || aTo !== bTo) {
-      return false;
-    }
-  }
-  
-  // Check other filter properties (keyword, source, sentiment)
-  if (a.keyword !== b.keyword || a.source !== b.source || a.sentiment !== b.sentiment) {
+    if (a.dateRange.from?.getTime() !== b.dateRange.from?.getTime()) return false;
+    if (a.dateRange.to?.getTime() !== b.dateRange.to?.getTime()) return false;
+  } else if ((a.dateRange && !b.dateRange) || (!a.dateRange && b.dateRange)) {
     return false;
   }
+
+  // Check for all other filter properties
+  const allProperties = new Set([
+    ...Object.keys(a || {}),
+    ...Object.keys(b || {})
+  ]);
+
+  // Skip these properties as they're checked separately or ignored
+  const skipProperties = new Set(['dateRange', '_forceUpdate']);
   
-  // If we've passed all checks, objects are considered equal
+  for (const prop of allProperties) {
+    if (skipProperties.has(prop)) continue;
+    
+    const aValue = a[prop as keyof FilterOptions];
+    const bValue = b[prop as keyof FilterOptions];
+    
+    // If one has the property and the other doesn't
+    if ((aValue === undefined && bValue !== undefined) || 
+        (aValue !== undefined && bValue === undefined)) {
+      return false;
+    }
+    
+    // If both are arrays, check if they have the same content
+    if (Array.isArray(aValue) && Array.isArray(bValue)) {
+      if (aValue.length !== bValue.length) return false;
+      
+      // Sort arrays to ensure consistent comparison
+      const sortedA = [...aValue].sort();
+      const sortedB = [...bValue].sort();
+      
+      for (let i = 0; i < sortedA.length; i++) {
+        if (sortedA[i] !== sortedB[i]) return false;
+      }
+    } 
+    // For non-array values
+    else if (aValue !== bValue) {
+      return false;
+    }
+  }
+  
   return true;
-};
+}
 
 // Helper to ensure dates are properly serialized
 const prepareFiltersForAPI = (filters?: FilterOptions): FilterOptions | undefined => {

@@ -104,12 +104,54 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       _forceUpdate: Date.now()
     };
     
-    // Add optional filters - using the last selected value for compatibility
-    if (currentActiveFilters.sources.length > 0) filters.source = currentActiveFilters.sources[currentActiveFilters.sources.length - 1];
-    if (currentActiveFilters.sentiments.length > 0) filters.sentiment = currentActiveFilters.sentiments[currentActiveFilters.sentiments.length - 1] as any;
-    if (currentActiveFilters.keywords.length > 0 && currentActiveFilters.keywords[0] !== 'all keywords') filters.tag = currentActiveFilters.keywords[currentActiveFilters.keywords.length - 1];
-    if (currentActiveFilters.issues.length > 0) filters.assigned_issue = currentActiveFilters.issues[currentActiveFilters.issues.length - 1];
+    // Add all active filter values as arrays instead of just the last one
+    // This ensures proper filtering when tags are removed
     
+    // Keywords/tags
+    if (currentActiveFilters.keywords.length > 0) {
+      if (currentActiveFilters.keywords.length === 1) {
+        // For backward compatibility, use single tag property when only one tag
+        const keyword = currentActiveFilters.keywords[0];
+        if (keyword !== 'all keywords') {
+          filters.tag = keyword;
+        }
+      } else {
+        // Use tags array for multiple tags
+        const validKeywords = currentActiveFilters.keywords.filter(k => k !== 'all keywords');
+        if (validKeywords.length > 0) {
+          filters.tags = validKeywords;
+        }
+      }
+    }
+    
+    // Sources
+    if (currentActiveFilters.sources.length > 0) {
+      if (currentActiveFilters.sources.length === 1) {
+        filters.source = currentActiveFilters.sources[0];
+      } else {
+        filters.sources = currentActiveFilters.sources;
+      }
+    }
+    
+    // Sentiments
+    if (currentActiveFilters.sentiments.length > 0) {
+      if (currentActiveFilters.sentiments.length === 1) {
+        filters.sentiment = currentActiveFilters.sentiments[0] as any;
+      } else {
+        filters.sentiments = currentActiveFilters.sentiments as any[];
+      }
+    }
+    
+    // Issues
+    if (currentActiveFilters.issues.length > 0) {
+      if (currentActiveFilters.issues.length === 1) {
+        filters.assigned_issue = currentActiveFilters.issues[0];
+      } else {
+        filters.assigned_issues = currentActiveFilters.issues;
+      }
+    }
+    
+    console.log('Creating filters:', filters);
     return filters;
   };
 
@@ -277,7 +319,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setSentiment('all');
     setAssignedIssue('all');
     
-    // Clear all active filters
+    // Reset all active filters
     setActiveFilters({
       keywords: [],
       sources: [],
@@ -285,21 +327,26 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       issues: []
     });
     
-    // Set to all time
-    const allTimeRange = {
-      from: new Date(2000, 0, 1), // January 1, 2000 (all time)
-      to: new Date(),
+    // Create a unique force update ID
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000000);
+    const forceUpdate = timestamp * 10000 + random;
+    
+    // Create a minimal filter object with just date range and force update
+    const newFilters: FilterOptions = {
+      _forceUpdate: forceUpdate,
+      dateRange: date && date.from && date.to ? {
+        from: new Date(date.from.getTime()),
+        to: new Date(date.to.getTime())
+      } : {
+        from: new Date(2000, 0, 1),
+        to: new Date()
+      }
     };
     
-    setDate(allTimeRange);
+    console.log('Clearing all filters, sending clean filter object:', newFilters);
     
-    // Create empty filters with just date range
-    const newFilters = createFilters('all', 'all', allTimeRange, 'all keywords', 'all', {
-      keywords: [],
-      sources: [],
-      sentiments: [],
-      issues: []
-    });
+    // Call the parent's filter change handler directly
     onFilterChange(newFilters);
   }
 
@@ -327,16 +374,73 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     // Update active filters
     setActiveFilters(newActiveFilters);
     
-    // Create new filters based on updated state
-    const newFilters = createFilters(
-      type === 'sources' && newActiveFilters.sources.length === 0 ? 'all' : source,
-      type === 'sentiments' && newActiveFilters.sentiments.length === 0 ? 'all' : sentiment,
-      date,
-      type === 'keywords' && newActiveFilters.keywords.length === 0 ? 'all keywords' : selectedKeyword,
-      type === 'issues' && newActiveFilters.issues.length === 0 ? 'all' : assignedIssue,
-      newActiveFilters
-    );
+    // Create a unique force update ID
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000000);
+    const forceUpdate = timestamp * 10000 + random;
     
+    // Create a fresh filter object to signal the change
+    const newFilters: FilterOptions = {
+      _forceUpdate: forceUpdate,
+      // Always include date range
+      dateRange: date && date.from && date.to ? {
+        from: new Date(date.from.getTime()),
+        to: new Date(date.to.getTime())
+      } : {
+        from: new Date(2000, 0, 1),
+        to: new Date()
+      }
+    };
+    
+    // Map active filters to API filter format
+    
+    // Keywords/tags
+    if (newActiveFilters.keywords.length > 0) {
+      if (newActiveFilters.keywords.length === 1) {
+        // Single tag
+        const keyword = newActiveFilters.keywords[0];
+        if (keyword !== 'all keywords') {
+          newFilters.tag = keyword;
+        }
+      } else {
+        // Multiple tags
+        const validKeywords = newActiveFilters.keywords.filter(k => k !== 'all keywords');
+        if (validKeywords.length > 0) {
+          newFilters.tags = validKeywords;
+        }
+      }
+    }
+    
+    // Sources
+    if (newActiveFilters.sources.length > 0) {
+      if (newActiveFilters.sources.length === 1) {
+        newFilters.source = newActiveFilters.sources[0];
+      } else {
+        newFilters.sources = [...newActiveFilters.sources];
+      }
+    }
+    
+    // Sentiments
+    if (newActiveFilters.sentiments.length > 0) {
+      if (newActiveFilters.sentiments.length === 1) {
+        newFilters.sentiment = newActiveFilters.sentiments[0] as any;
+      } else {
+        newFilters.sentiments = [...newActiveFilters.sentiments] as any[];
+      }
+    }
+    
+    // Issues
+    if (newActiveFilters.issues.length > 0) {
+      if (newActiveFilters.issues.length === 1) {
+        newFilters.assigned_issue = newActiveFilters.issues[0];
+      } else {
+        newFilters.assigned_issues = [...newActiveFilters.issues];
+      }
+    }
+    
+    console.log('Removing filter, sending new filters object:', newFilters);
+    
+    // Call the parent's filter change handler
     onFilterChange(newFilters);
   }
 

@@ -109,28 +109,27 @@ export default function DashboardPage() {
   const handleFilterChange = (newFilters: FilterOptions) => {
     console.log('Dashboard received new filters:', newFilters);
     
-    // Force immediate re-fetch with timestamp
-    const forceUpdate = Date.now();
+    // Generate a unique force update ID with high entropy
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000000);
+    const forceUpdate = timestamp * 10000 + random;
     
     // Create a completely new filter object
-    const updatedFilters: FilterOptions = {
-      _forceUpdate: forceUpdate
-    };
+    const updatedFilters: FilterOptions = {};
+    
+    // Add the force update ID
+    updatedFilters._forceUpdate = forceUpdate;
     
     // Handle date range with explicit new Date objects
     if (newFilters.dateRange) {
       // New date range provided, use it
-      const fromDate = new Date(
-        newFilters.dateRange.from instanceof Date 
-          ? newFilters.dateRange.from.getTime() 
-          : new Date(newFilters.dateRange.from).getTime()
-      );
+      const fromDate = newFilters.dateRange.from instanceof Date 
+        ? new Date(newFilters.dateRange.from.getTime()) 
+        : new Date(newFilters.dateRange.from);
       
-      const toDate = new Date(
-        newFilters.dateRange.to instanceof Date 
-          ? newFilters.dateRange.to.getTime() 
-          : new Date(newFilters.dateRange.to).getTime()
-      );
+      const toDate = newFilters.dateRange.to instanceof Date 
+        ? new Date(newFilters.dateRange.to.getTime()) 
+        : new Date(newFilters.dateRange.to);
       
       // Set proper time components
       fromDate.setHours(0, 0, 0, 0);
@@ -148,43 +147,42 @@ export default function DashboardPage() {
       };
     }
     
-    // Process keyword - direct check for property existence
+    // Process other filter properties by explicit checking
+    // Don't merge/preserve previous values, only use what's provided in newFilters
     if ('keyword' in newFilters) {
-      // If keyword property exists in newFilters, use its value
-      if (newFilters.keyword !== undefined && newFilters.keyword !== null) {
-        updatedFilters.keyword = newFilters.keyword;
-      }
-      // If keyword is explicitly null or undefined, don't add it to updatedFilters
-      // This ensures the property is removed when Clear All is clicked
-      console.log('Keyword in newFilters:', newFilters.keyword);
-    } else if (filters.keyword) {
-      // Preserve existing keyword if not explicitly addressed in newFilters
-      updatedFilters.keyword = filters.keyword;
+      updatedFilters.keyword = newFilters.keyword;
     }
     
-    // Process other filters using the same pattern
     if ('source' in newFilters) {
-      if (newFilters.source !== undefined) updatedFilters.source = newFilters.source;
-    } else if (filters.source) {
-      updatedFilters.source = filters.source;
+      updatedFilters.source = newFilters.source;
+    }
+    
+    if ('sources' in newFilters) {
+      updatedFilters.sources = newFilters.sources;
     }
     
     if ('sentiment' in newFilters) {
-      if (newFilters.sentiment !== undefined) updatedFilters.sentiment = newFilters.sentiment;
-    } else if (filters.sentiment) {
-      updatedFilters.sentiment = filters.sentiment;
+      updatedFilters.sentiment = newFilters.sentiment;
+    }
+    
+    if ('sentiments' in newFilters) {
+      updatedFilters.sentiments = newFilters.sentiments;
     }
     
     if ('tag' in newFilters) {
-      if (newFilters.tag !== undefined) updatedFilters.tag = newFilters.tag;
-    } else if (filters.tag) {
-      updatedFilters.tag = filters.tag;
+      updatedFilters.tag = newFilters.tag;
+    }
+    
+    if ('tags' in newFilters) {
+      updatedFilters.tags = newFilters.tags;
     }
     
     if ('assigned_issue' in newFilters) {
-      if (newFilters.assigned_issue !== undefined) updatedFilters.assigned_issue = newFilters.assigned_issue;
-    } else if (filters.assigned_issue) {
-      updatedFilters.assigned_issue = filters.assigned_issue;
+      updatedFilters.assigned_issue = newFilters.assigned_issue;
+    }
+    
+    if ('assigned_issues' in newFilters) {
+      updatedFilters.assigned_issues = newFilters.assigned_issues;
     }
     
     console.log('Setting new filters with force update:', updatedFilters);
@@ -328,10 +326,12 @@ export default function DashboardPage() {
                     {/* Sentiment and Mentions Charts */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
                       <SentimentChart 
+                        key={`sentiment-${filters._forceUpdate || 'initial'}`}
                         sentimentData={sentimentSummary} 
                         loading={sentimentLoading} 
                       />
                       <MentionsChart 
+                        key={`mentions-${filters._forceUpdate || 'initial'}`}
                         mentionsData={mentions} 
                         loading={mentionsLoading} 
                         type="area"
@@ -341,10 +341,12 @@ export default function DashboardPage() {
                     {/* Top Sources and Tags */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
                       <SourcesChart 
+                        key={`sources-${filters._forceUpdate || 'initial'}`}
                         sourcesData={sources} 
                         loading={sourcesLoading} 
                       />
                       <TagsChart 
+                        key={`tags-${filters._forceUpdate || 'initial'}`}
                         tagsData={tags} 
                         loading={tagsLoading} 
                         type="cloud"
@@ -353,6 +355,7 @@ export default function DashboardPage() {
 
                     {/* Recent Articles Table */}
                     <ArticlesTable 
+                      key={`articles-${filters._forceUpdate || 'initial'}`}
                       articles={articles} 
                       loading={articlesLoading} 
                       pageSize={10}
