@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, ChevronDown, Maximize2 } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Article } from '@/lib/data/types'
+import { cn } from '@/lib/utils'
+import React from 'react'
 
 interface ArticlesTableProps {
   articles: Article[] | null
@@ -21,6 +23,7 @@ export function ArticlesTable({
   pageSize = 5,
 }: ArticlesTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   
   // Calculate pagination values
   const totalArticles = articles?.length || 0
@@ -28,6 +31,15 @@ export function ArticlesTable({
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = Math.min(startIndex + pageSize, totalArticles)
   const currentArticles = articles?.slice(startIndex, endIndex) || []
+  
+  // Toggle row expansion
+  const toggleRowExpansion = (index: number) => {
+    const rowKey = `article-${startIndex + index}`
+    setExpandedRows(prev => ({
+      ...prev,
+      [rowKey]: !prev[rowKey]
+    }))
+  }
   
   // Get predominant sentiment for an article
   const getPredominantSentiment = (article: Article) => {
@@ -43,6 +55,20 @@ export function ArticlesTable({
     } else {
       return 'Neutral'
     }
+  }
+  
+  // Get average sentiment score
+  const getAverageSentimentScore = (article: Article) => {
+    if (!article.sentiment_analysis || article.sentiment_analysis.length === 0) {
+      return 0
+    }
+    
+    const totalScore = article.sentiment_analysis.reduce(
+      (sum, analysis) => sum + analysis.sentiment_score, 
+      0
+    )
+    
+    return totalScore / article.sentiment_analysis.length
   }
   
   // Get badge variant based on sentiment
@@ -105,46 +131,111 @@ export function ArticlesTable({
             <TableBody>
               {currentArticles.map((article, index) => {
                 const sentiment = getPredominantSentiment(article)
+                const rowKey = `article-${startIndex + index}`
+                const isExpanded = expandedRows[rowKey] || false
                 
                 return (
-                  <TableRow key={`article-${startIndex + index}`}>
-                    <TableCell className="max-w-[400px]">
-                      <div className="flex items-start">
-                        <div>
-                          <div className="font-medium">{truncateText(article.title, 80)}</div>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {article.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="px-1.5 py-0 text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {article.tags.length > 3 && (
-                              <Badge variant="outline" className="px-1.5 py-0 text-xs">
-                                +{article.tags.length - 3} more
-                              </Badge>
-                            )}
+                  <React.Fragment key={rowKey}>
+                    <TableRow 
+                      className="cursor-pointer hover:bg-muted/80"
+                      onClick={() => toggleRowExpansion(index)}
+                    >
+                      <TableCell className="max-w-[400px]">
+                        <div className="flex items-start">
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {truncateText(article.title, 80)}
+                            </div>
                           </div>
+                          {article.link && (
+                            <a
+                              href={article.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-2 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
                         </div>
-                        {article.link && (
-                          <a
-                            href={article.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-muted-foreground hover:text-foreground"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{article.source}</TableCell>
-                    <TableCell>{formatDate(article.published_date)}</TableCell>
-                    <TableCell>
-                      <Badge variant={getSentimentBadgeVariant(sentiment)}>
-                        {sentiment}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell>{article.source}</TableCell>
+                      <TableCell>{formatDate(article.published_date)}</TableCell>
+                      <TableCell>
+                        <Badge variant={getSentimentBadgeVariant(sentiment)}>
+                          {sentiment}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                    
+                    {isExpanded && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={4} className="p-4">
+                          <div className="space-y-4">
+                            {/* Tags section */}
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Keywords</h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {article.tags && article.tags.map((tag) => (
+                                  <Badge key={tag} variant="outline" className="px-2 py-0.5 text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {(!article.tags || article.tags.length === 0) && (
+                                  <span className="text-xs text-muted-foreground">No keywords</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Sentiment details */}
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Sentiment Details</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-background rounded p-2">
+                                  <div className="text-xs text-muted-foreground">Sentiment Score</div>
+                                  <div className="font-medium">
+                                    {getAverageSentimentScore(article).toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="bg-background rounded p-2">
+                                  <div className="text-xs text-muted-foreground">Sentiment Breakdown</div>
+                                  <div className="text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                      <span>Positive:</span>
+                                      <span>{article.sentiment_analysis.filter(s => s.sentiment === 'Positive').length}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Neutral:</span>
+                                      <span>{article.sentiment_analysis.filter(s => s.sentiment === 'Neutral').length}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Negative:</span>
+                                      <span>{article.sentiment_analysis.filter(s => s.sentiment === 'Negative').length}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {article.assigned_issue && (
+                                  <div className="bg-background rounded p-2">
+                                    <div className="text-xs text-muted-foreground">Assigned Issue</div>
+                                    <div className="font-medium">{article.assigned_issue}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Article content preview */}
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Content Preview</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {truncateText(article.content, 300)}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 )
               })}
             </TableBody>
