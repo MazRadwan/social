@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions } from '@/lib/data/types';
+import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions, SentimentOverTime } from '@/lib/data/types';
 
 // Check if two filter options are equal
 function isEqual(a?: FilterOptions, b?: FilterOptions): boolean {
@@ -462,4 +462,63 @@ export function useTopIssues(filters?: FilterOptions, limit: number = 5) {
   }, [issues, loading, error]);
   
   return { issues, loading, error };
+}
+
+// Hook for fetching sentiment data over time
+export function useSentimentOverTime(filters?: FilterOptions) {
+  const [sentimentData, setSentimentData] = useState<SentimentOverTime[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const previousFiltersRef = useRef<FilterOptions | undefined>(filters);
+  const isFirstRenderRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    // Always fetch on first render or if filters changed
+    if (isFirstRenderRef.current || !isEqual(filters, previousFiltersRef.current)) {
+      isFirstRenderRef.current = false;
+      previousFiltersRef.current = filters;
+      
+      console.log('Fetching sentiment over time with filters:', filters);
+    
+      const fetchSentimentOverTime = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const preparedFilters = prepareFiltersForAPI(filters);
+          
+          // Add the action parameter to specify we want sentiment over time
+          const requestBody: any = {
+            action: 'sentiment_over_time',
+            filters: preparedFilters
+          };
+          
+          const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch sentiment over time data');
+          }
+          
+          const responseData = await response.json();
+          console.log('Sentiment over time response:', responseData);
+          setSentimentData(responseData.data?.sentimentOverTime || []);
+        } catch (err) {
+          console.error('Error fetching sentiment over time:', err);
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchSentimentOverTime();
+    }
+  }, [filters]);
+  
+  return { sentimentData, loading, error };
 } 

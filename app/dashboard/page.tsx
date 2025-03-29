@@ -35,6 +35,7 @@ import { SourcesChart } from "@/components/dashboard/sources-chart"
 import { IssueCloud } from "@/components/dashboard/issue-cloud"
 import { ArticlesTable } from "@/components/dashboard/articles-table"
 import { MetricsOverview } from "@/components/dashboard/metrics-overview"
+import { SentimentTrendChart } from "@/components/dashboard/sentiment-trend-chart"
 
 import { FilterOptions } from "@/lib/data/types"
 import { useArticles } from "@/hooks/use-article-data"
@@ -42,6 +43,7 @@ import { useSentimentSummary } from "@/hooks/use-article-data"
 import { useTopSources } from "@/hooks/use-article-data"
 import { useTopIssues } from "@/hooks/use-article-data"
 import { useMentionsOverTime } from "@/hooks/use-article-data"
+import { useSentimentOverTime } from "@/hooks/use-article-data"
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -99,6 +101,13 @@ export default function DashboardPage() {
     loading: mentionsLoading,
     error: mentionsError 
   } = useMentionsOverTime(filters)
+
+  // Fetch sentiment over time
+  const {
+    sentimentData,
+    loading: sentimentTrendLoading,
+    error: sentimentTrendError
+  } = useSentimentOverTime(filters)
 
   // Get list of all sources for filter dropdown
   const availableSources = Array.from(
@@ -323,12 +332,12 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {/* Sentiment and Mentions Charts */}
+                    {/* Sentiment Trend and Mentions Charts */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-                      <SentimentChart 
-                        key={`sentiment-${filters._forceUpdate || 'initial'}`}
-                        sentimentData={sentimentSummary} 
-                        loading={sentimentLoading} 
+                      <SentimentTrendChart 
+                        key={`sentiment-trend-${filters._forceUpdate || 'initial'}`}
+                        sentimentData={sentimentData} 
+                        loading={sentimentTrendLoading} 
                       />
                       <MentionsChart 
                         key={`mentions-${filters._forceUpdate || 'initial'}`}
@@ -338,12 +347,17 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {/* Top Sources and Issues */}
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+                    {/* Top Sources, Sentiment Distribution, and Issues */}
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                       <SourcesChart 
                         key={`sources-${filters._forceUpdate || 'initial'}`}
                         sourcesData={sources} 
                         loading={sourcesLoading} 
+                      />
+                      <SentimentChart 
+                        key={`sentiment-${filters._forceUpdate || 'initial'}`}
+                        sentimentData={sentimentSummary} 
+                        loading={sentimentLoading} 
                       />
                       <IssueCloud 
                         key={`issues-${filters._forceUpdate || 'initial'}`}

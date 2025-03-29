@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions } from './types';
+import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions, SentimentOverTime } from './types';
 
 /**
  * ArticleService - A layer to abstract data access
@@ -229,6 +229,80 @@ class ArticleService {
   }
   
   /**
+   * Get sentiment data over time
+   */
+  static async getSentimentOverTime(articles?: Article[]): Promise<SentimentOverTime[]> {
+    const data = articles || await this.getArticles();
+    
+    // Group articles by date
+    const dateGroups: Record<string, Article[]> = {};
+    
+    data.forEach(article => {
+      // Get date part only (without time)
+      const publishedDate = new Date(article.published_date);
+      const dateStr = publishedDate.toISOString().split('T')[0];
+      
+      if (!dateGroups[dateStr]) {
+        dateGroups[dateStr] = [];
+      }
+      dateGroups[dateStr].push(article);
+    });
+    
+    // Sort dates
+    const sortedDates = Object.keys(dateGroups).sort();
+    
+    // Calculate sentiment metrics for each date
+    const sentimentData = sortedDates.map(dateStr => {
+      const articlesOnDate = dateGroups[dateStr];
+      let positiveCount = 0;
+      let neutralCount = 0;
+      let negativeCount = 0;
+      let totalScore = 0;
+      
+      articlesOnDate.forEach(article => {
+        if (!article.sentiment_analysis || article.sentiment_analysis.length === 0) {
+          neutralCount++;
+          return;
+        }
+        
+        // Count sentiment for each article
+        const sentiments = article.sentiment_analysis.map(s => s.sentiment);
+        const positiveInArticle = sentiments.filter(s => s === 'Positive').length;
+        const negativeInArticle = sentiments.filter(s => s === 'Negative').length;
+        const neutralInArticle = sentiments.filter(s => s === 'Neutral').length;
+        
+        // Get average sentiment score for the article
+        const avgScore = article.sentiment_analysis.reduce((sum, item) => sum + item.sentiment_score, 0) 
+          / article.sentiment_analysis.length;
+        
+        totalScore += avgScore;
+        
+        // Determine predominant sentiment for the article
+        if (positiveInArticle > negativeInArticle && positiveInArticle > neutralInArticle) {
+          positiveCount++;
+        } else if (negativeInArticle > positiveInArticle && negativeInArticle > neutralInArticle) {
+          negativeCount++;
+        } else {
+          neutralCount++;
+        }
+      });
+      
+      // Calculate average sentiment score for the day
+      const avgDailyScore = articlesOnDate.length > 0 ? totalScore / articlesOnDate.length : 0;
+      
+      return {
+        date: dateStr,
+        positive: positiveCount,
+        neutral: neutralCount,
+        negative: negativeCount,
+        score: avgDailyScore
+      };
+    });
+    
+    return sentimentData;
+  }
+  
+  /**
    * Get top issues by frequency
    */
   static async getTopIssues(articles?: Article[], limit: number = 10): Promise<ArticlesByIssue[]> {
@@ -272,4 +346,5 @@ export const getSentimentSummary = ArticleService.getSentimentSummary.bind(Artic
 export const getTopSources = ArticleService.getTopSources.bind(ArticleService);
 export const getTopTags = ArticleService.getTopTags.bind(ArticleService);
 export const getMentionsOverTime = ArticleService.getMentionsOverTime.bind(ArticleService);
+export const getSentimentOverTime = ArticleService.getSentimentOverTime.bind(ArticleService);
 export const getTopIssues = ArticleService.getTopIssues.bind(ArticleService); 

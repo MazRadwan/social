@@ -40,6 +40,14 @@ export interface ArticlesByIssue {
   count: number;
 }
 
+export interface SentimentOverTime {
+  date: string;
+  positive: number;
+  neutral: number;
+  negative: number;
+  score: number;
+}
+
 export interface FilterOptions {
   dateRange?: {
     from: Date;

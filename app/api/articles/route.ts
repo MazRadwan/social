@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getArticles, getFilteredArticles, getSentimentSummary, getTopSources, getTopTags, getMentionsOverTime, getTopIssues } from '@/lib/data/articles';
+import { getArticles, getFilteredArticles, getSentimentSummary, getTopSources, getTopTags, getMentionsOverTime, getTopIssues, getSentimentOverTime } from '@/lib/data/articles';
 import { FilterOptions } from '@/lib/data/types';
 
 /**
@@ -194,6 +194,13 @@ export async function POST(request: Request) {
         console.log('POST API - getTopIssues received articles count:', articles.length);
         console.log('POST API - top_issues result:', issues);
         return NextResponse.json({ data: { issues } });
+        
+      case 'sentiment_over_time':
+        const sentimentOverTime = await getSentimentOverTime(articles);
+        console.log('POST API - sentiment_over_time requested with filters:', filters);
+        console.log('POST API - getSentimentOverTime received articles count:', articles.length);
+        console.log('POST API - sentiment_over_time result count:', sentimentOverTime.length);
+        return NextResponse.json({ data: { sentimentOverTime } });
         
       default:
         return NextResponse.json({ 
