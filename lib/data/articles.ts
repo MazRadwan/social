@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from './types';
+import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions } from './types';
 
 /**
  * ArticleService - A layer to abstract data access
@@ -227,6 +227,42 @@ class ArticleService {
     // Sort by date
     return dateArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
+  
+  /**
+   * Get top issues by frequency
+   */
+  static async getTopIssues(articles?: Article[], limit: number = 10): Promise<ArticlesByIssue[]> {
+    console.log(`getTopIssues called with ${articles ? articles.length : 'no'} articles and limit ${limit}`);
+    
+    const data = articles || await this.getArticles();
+    console.log(`getTopIssues working with ${data.length} articles`);
+    
+    // Count articles by issue
+    const issueCounts: Record<string, number> = {};
+    let articlesWithIssues = 0;
+    
+    data.forEach(article => {
+      if (article.assigned_issue) {
+        articlesWithIssues++;
+        issueCounts[article.assigned_issue] = (issueCounts[article.assigned_issue] || 0) + 1;
+      }
+    });
+    
+    console.log(`Found ${articlesWithIssues} articles with assigned issues`);
+    console.log('Issue counts:', issueCounts);
+    
+    // Convert to array and sort by count
+    const issueArray = Object.entries(issueCounts).map(([issue, count]) => ({ 
+      issue, 
+      count 
+    }));
+    
+    // Sort by count and limit
+    const result = issueArray.sort((a, b) => b.count - a.count).slice(0, limit);
+    console.log(`Returning ${result.length} issues:`, result);
+    
+    return result;
+  }
 }
 
 // Export the service methods to maintain the same API as before
@@ -235,4 +271,5 @@ export const getFilteredArticles = ArticleService.getFilteredArticles.bind(Artic
 export const getSentimentSummary = ArticleService.getSentimentSummary.bind(ArticleService);
 export const getTopSources = ArticleService.getTopSources.bind(ArticleService);
 export const getTopTags = ArticleService.getTopTags.bind(ArticleService);
-export const getMentionsOverTime = ArticleService.getMentionsOverTime.bind(ArticleService); 
+export const getMentionsOverTime = ArticleService.getMentionsOverTime.bind(ArticleService);
+export const getTopIssues = ArticleService.getTopIssues.bind(ArticleService); 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from '@/lib/data/types';
+import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, ArticlesByIssue, FilterOptions } from '@/lib/data/types';
 
 // Check if two filter options are equal
 function isEqual(a?: FilterOptions, b?: FilterOptions): boolean {
@@ -390,4 +390,76 @@ export function useMentionsOverTime(filters?: FilterOptions) {
   }, [filters]);
   
   return { mentions, loading, error };
+}
+
+// Hook for fetching top issues
+export function useTopIssues(filters?: FilterOptions, limit: number = 5) {
+  const [issues, setIssues] = useState<ArticlesByIssue[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const previousFiltersRef = useRef<FilterOptions | undefined>(filters);
+  const previousLimitRef = useRef<number>(limit);
+  const isFirstRenderRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    console.log("useTopIssues effect called with filters:", filters, "and limit:", limit);
+    console.log("useTopIssues comparing with previous filters:", previousFiltersRef.current);
+    
+    // Always fetch on first render or if filters/limit changed
+    if (isFirstRenderRef.current || !isEqual(filters, previousFiltersRef.current) || limit !== previousLimitRef.current) {
+      console.log("useTopIssues: fetching data due to changes or first render");
+      isFirstRenderRef.current = false;
+      previousFiltersRef.current = filters;
+      previousLimitRef.current = limit;
+      
+      const fetchIssues = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const preparedFilters = prepareFiltersForAPI(filters);
+          console.log("useTopIssues: prepared filters:", preparedFilters);
+          
+          // Add the action parameter to specify we want top issues
+          const requestBody: any = {
+            action: 'top_issues',
+            filters: preparedFilters,
+            limit
+          };
+          
+          console.log("useTopIssues: sending request with body:", requestBody);
+          
+          const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch top issues');
+          }
+          
+          const responseData = await response.json();
+          console.log("useTopIssues: received response:", responseData);
+          setIssues(responseData.data?.issues || []);
+        } catch (err) {
+          console.error("useTopIssues: error fetching data:", err);
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchIssues();
+    }
+  }, [filters, limit]);
+  
+  // Debug - log state on each render
+  useEffect(() => {
+    console.log("useTopIssues current state:", { issues, loading, error });
+  }, [issues, loading, error]);
+  
+  return { issues, loading, error };
 } 

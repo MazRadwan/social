@@ -35,6 +35,11 @@ export interface ArticlesByTag {
   count: number;
 }
 
+export interface ArticlesByIssue {
+  issue: string;
+  count: number;
+}
+
 export interface FilterOptions {
   dateRange?: {
     from: Date;

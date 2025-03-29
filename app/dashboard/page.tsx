@@ -32,7 +32,7 @@ import { FilterBar } from "@/components/dashboard/filter-bar"
 import { SentimentChart } from "@/components/dashboard/sentiment-chart"
 import { MentionsChart } from "@/components/dashboard/mentions-chart"
 import { SourcesChart } from "@/components/dashboard/sources-chart"
-import { TagsChart } from "@/components/dashboard/tags-chart"
+import { IssueCloud } from "@/components/dashboard/issue-cloud"
 import { ArticlesTable } from "@/components/dashboard/articles-table"
 import { MetricsOverview } from "@/components/dashboard/metrics-overview"
 
@@ -40,7 +40,7 @@ import { FilterOptions } from "@/lib/data/types"
 import { useArticles } from "@/hooks/use-article-data"
 import { useSentimentSummary } from "@/hooks/use-article-data"
 import { useTopSources } from "@/hooks/use-article-data"
-import { useTopTags } from "@/hooks/use-article-data"
+import { useTopIssues } from "@/hooks/use-article-data"
 import { useMentionsOverTime } from "@/hooks/use-article-data"
 
 export default function DashboardPage() {
@@ -86,12 +86,12 @@ export default function DashboardPage() {
     error: sourcesError 
   } = useTopSources(filters, 5) // Get top 5 sources
 
-  // Fetch top tags
+  // Fetch top issues
   const { 
-    tags, 
-    loading: tagsLoading,
-    error: tagsError 
-  } = useTopTags(filters, 10) // Get top 10 tags
+    issues, 
+    loading: issuesLoading,
+    error: issuesError 
+  } = useTopIssues(filters, 10) // Get top 10 issues
 
   // Fetch mentions over time
   const { 
@@ -292,9 +292,9 @@ export default function DashboardPage() {
                       <div>
                         <div className="text-muted-foreground">
                           Monitoring keywords:{" "}
-                          {tags?.slice(0, 3).map((tag) => (
-                            <Badge key={tag.tag} variant="outline" className="ml-1">
-                              {tag.tag}
+                          {issues?.slice(0, 3).map((issue) => (
+                            <Badge key={issue.issue} variant="outline" className="ml-1">
+                              {issue.issue}
                             </Badge>
                           ))}
                         </div>
@@ -338,18 +338,17 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {/* Top Sources and Tags */}
+                    {/* Top Sources and Issues */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
                       <SourcesChart 
                         key={`sources-${filters._forceUpdate || 'initial'}`}
                         sourcesData={sources} 
                         loading={sourcesLoading} 
                       />
-                      <TagsChart 
-                        key={`tags-${filters._forceUpdate || 'initial'}`}
-                        tagsData={tags} 
-                        loading={tagsLoading} 
-                        type="cloud"
+                      <IssueCloud 
+                        key={`issues-${filters._forceUpdate || 'initial'}`}
+                        issuesData={issues} 
+                        loading={issuesLoading} 
                       />
                     </div>
 
