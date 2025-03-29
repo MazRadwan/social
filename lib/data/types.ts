@@ -40,10 +40,15 @@ export interface FilterOptions {
     from: Date;
     to: Date;
   };
-  keyword?: string;
+  keyword?: string | null;
   source?: string;
+  sources?: string[];
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
+  sentiments?: ('Positive' | 'Neutral' | 'Negative')[];
   tag?: string;
+  tags?: string[];
+  assigned_issue?: string;
+  assigned_issues?: string[];
   _forceUpdate?: number;
 }
 

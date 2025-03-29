@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { X, ChevronDown } from 'lucide-react'
+import { X, ChevronDown, Filter } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,9 +31,7 @@ const MONITORING_KEYWORDS = [
 
 export function FilterBar({ onFilterChange, availableSources, initialFilters }: FilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [keyword, setKeyword] = useState<string>(initialFilters?.keyword || '')
-  const [searchTags, setSearchTags] = useState<string[]>([])
-  const [selectedKeyword, setSelectedKeyword] = useState<string>("all keywords")
+  const [selectedKeyword, setSelectedKeyword] = useState<string>(initialFilters?.tag || "all keywords")
   const [source, setSource] = useState<string>(initialFilters?.source || 'all')
   const [sentiment, setSentiment] = useState<'Positive' | 'Neutral' | 'Negative' | 'all'>(
     initialFilters?.sentiment || 'all'
@@ -44,22 +42,53 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       to: new Date(),
     }
   )
+  const [assignedIssue, setAssignedIssue] = useState<string>(initialFilters?.assigned_issue || 'all')
+  const [availableIssues, setAvailableIssues] = useState<string[]>([])
+  const [issuesLoading, setIssuesLoading] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<{
+    keywords: string[];
+    sources: string[];
+    sentiments: string[];
+    issues: string[];
+  }>({
+    keywords: selectedKeyword !== 'all keywords' ? [selectedKeyword] : [],
+    sources: source !== 'all' ? [source] : [],
+    sentiments: sentiment !== 'all' ? [sentiment] : [],
+    issues: assignedIssue !== 'all' ? [assignedIssue] : [],
+  });
 
-  // Initialize searchTags from initialFilters if keyword exists
+  // Fetch available issues from the API
   useEffect(() => {
-    if (initialFilters?.keyword) {
-      setSearchTags([initialFilters.keyword]);
-    }
-  }, [initialFilters]);
+    const fetchIssues = async () => {
+      setIssuesLoading(true);
+      try {
+        // Fetch unique issues from the API
+        const response = await fetch('/api/issues');
+        if (!response.ok) {
+          throw new Error('Failed to fetch issues');
+        }
+        const data = await response.json();
+        setAvailableIssues(data.issues || []);
+      } catch (error) {
+        console.error('Error fetching issues:', error);
+        // Fallback to static list if API fails
+        setAvailableIssues(['Issue 1', 'Issue 2', 'Issue 3']);
+      } finally {
+        setIssuesLoading(false);
+      }
+    };
+
+    fetchIssues();
+  }, []);
 
   // Helper function to create filters with the current state
   const createFilters = (
-    currentKeyword = '',
     currentSource = source,
     currentSentiment = sentiment,
     currentDate = date,
     currentSelectedKeyword = selectedKeyword,
-    currentSearchTags = searchTags
+    currentAssignedIssue = assignedIssue,
+    currentActiveFilters = activeFilters
   ): FilterOptions => {
     // Create fresh date objects
     const fromDate = currentDate?.from ? new Date(currentDate.from.getTime()) : new Date(2000, 0, 1);
@@ -75,87 +104,139 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       _forceUpdate: Date.now()
     };
     
-    // Add optional filters
-    // If we have search tags, join them with OR for keyword search
-    if (currentSearchTags.length > 0) {
-      // Each term should be searched independently
-      filters.keyword = currentSearchTags.join(' OR ');
-    } else if (currentKeyword) {
-      filters.keyword = currentKeyword;
-    }
-    
-    if (currentSource !== 'all') filters.source = currentSource;
-    if (currentSentiment !== 'all') filters.sentiment = currentSentiment;
-    if (currentSelectedKeyword !== 'all keywords') filters.tag = currentSelectedKeyword;
+    // Add optional filters - using the last selected value for compatibility
+    if (currentActiveFilters.sources.length > 0) filters.source = currentActiveFilters.sources[currentActiveFilters.sources.length - 1];
+    if (currentActiveFilters.sentiments.length > 0) filters.sentiment = currentActiveFilters.sentiments[currentActiveFilters.sentiments.length - 1] as any;
+    if (currentActiveFilters.keywords.length > 0 && currentActiveFilters.keywords[0] !== 'all keywords') filters.tag = currentActiveFilters.keywords[currentActiveFilters.keywords.length - 1];
+    if (currentActiveFilters.issues.length > 0) filters.assigned_issue = currentActiveFilters.issues[currentActiveFilters.issues.length - 1];
     
     return filters;
   };
 
-  // Handle user input changes
-  const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newKeyword = e.target.value;
-    setKeyword(newKeyword);
-    
-    // We don't update filters immediately on change anymore
-    // Only update when Enter is pressed or when the keyword is cleared
-    if (newKeyword === '') {
-      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
-      onFilterChange(newFilters);
-    }
-  }
-
-  // Handle Enter key press in the keyword search field
-  const handleKeywordKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && keyword.trim()) {
-      e.preventDefault();
-      
-      // Split the keyword by spaces and filter out empty strings
-      const newTerms = keyword.trim().split(/\s+/).filter(term => term && term !== 'OR');
-      
-      // Add each term as a separate tag
-      const newSearchTags = [...searchTags, ...newTerms];
-      setSearchTags(newSearchTags);
-      
-      // Create filters with the updated search tags
-      const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
-      console.log('Search submitted with keyword tags:', newSearchTags);
-      onFilterChange(newFilters);
-      
-      // Clear the search input
-      setKeyword('');
-    }
-  }
-
-  // Handle removing a search tag
-  const handleRemoveSearchTag = (tagToRemove: string) => {
-    const newSearchTags = searchTags.filter(tag => tag !== tagToRemove);
-    setSearchTags(newSearchTags);
-    
-    // Update filters with the new tags
-    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, newSearchTags);
-    onFilterChange(newFilters);
-  }
-
   const handleSelectedKeywordChange = (value: string) => {
+    // Don't add 'all keywords' to active filters
+    if (value === 'all keywords') {
+      setSelectedKeyword(value);
+      // Clear all keyword filters
+      const newActiveFilters = {
+        ...activeFilters,
+        keywords: []
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, sentiment, date, value, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+      return;
+    }
+    
     setSelectedKeyword(value);
     
-    const newFilters = createFilters(keyword, source, sentiment, date, value, searchTags);
-    onFilterChange(newFilters);
+    // Add to active filters if not already present
+    if (!activeFilters.keywords.includes(value)) {
+      const newActiveFilters = {
+        ...activeFilters,
+        keywords: [...activeFilters.keywords, value]
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, sentiment, date, value, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+    }
   }
 
   const handleSourceChange = (value: string) => {
+    // Don't add 'all' to active filters
+    if (value === 'all') {
+      setSource(value);
+      // Clear all source filters
+      const newActiveFilters = {
+        ...activeFilters,
+        sources: []
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(value, sentiment, date, selectedKeyword, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+      return;
+    }
+    
     setSource(value);
     
-    const newFilters = createFilters(keyword, value, sentiment, date, selectedKeyword, searchTags);
-    onFilterChange(newFilters);
+    // Add to active filters if not already present
+    if (!activeFilters.sources.includes(value)) {
+      const newActiveFilters = {
+        ...activeFilters,
+        sources: [...activeFilters.sources, value]
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(value, sentiment, date, selectedKeyword, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+    }
   }
 
   const handleSentimentChange = (value: string) => {
     const newSentiment = value as 'Positive' | 'Neutral' | 'Negative' | 'all';
+    
+    // Don't add 'all' to active filters
+    if (newSentiment === 'all') {
+      setSentiment(newSentiment);
+      // Clear all sentiment filters
+      const newActiveFilters = {
+        ...activeFilters,
+        sentiments: []
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, newSentiment, date, selectedKeyword, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+      return;
+    }
+    
     setSentiment(newSentiment);
     
-    const newFilters = createFilters(keyword, source, newSentiment, date, selectedKeyword, searchTags);
-    onFilterChange(newFilters);
+    // Add to active filters if not already present
+    if (!activeFilters.sentiments.includes(newSentiment)) {
+      const newActiveFilters = {
+        ...activeFilters,
+        sentiments: [...activeFilters.sentiments, newSentiment]
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, newSentiment, date, selectedKeyword, assignedIssue, newActiveFilters);
+      onFilterChange(newFilters);
+    }
+  }
+
+  const handleAssignedIssueChange = (value: string) => {
+    // Don't add 'all' to active filters
+    if (value === 'all') {
+      setAssignedIssue(value);
+      // Clear all issue filters
+      const newActiveFilters = {
+        ...activeFilters,
+        issues: []
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, sentiment, date, selectedKeyword, value, newActiveFilters);
+      onFilterChange(newFilters);
+      return;
+    }
+    
+    setAssignedIssue(value);
+    
+    // Add to active filters if not already present
+    if (!activeFilters.issues.includes(value)) {
+      const newActiveFilters = {
+        ...activeFilters,
+        issues: [...activeFilters.issues, value]
+      };
+      setActiveFilters(newActiveFilters);
+      
+      const newFilters = createFilters(source, sentiment, date, selectedKeyword, value, newActiveFilters);
+      onFilterChange(newFilters);
+    }
   }
 
   // Handle date range changes
@@ -185,17 +266,24 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(newRange);
     
     // Use helper to create filters
-    const newFilters = createFilters(keyword, source, sentiment, newRange, selectedKeyword, searchTags);
+    const newFilters = createFilters(source, sentiment, newRange, selectedKeyword, assignedIssue, activeFilters);
     onFilterChange(newFilters);
   }
 
   // Clear all filters
   const handleClearFilters = () => {
-    setKeyword('');
-    setSearchTags([]);
     setSelectedKeyword('all keywords');
     setSource('all');
     setSentiment('all');
+    setAssignedIssue('all');
+    
+    // Clear all active filters
+    setActiveFilters({
+      keywords: [],
+      sources: [],
+      sentiments: [],
+      issues: []
+    });
     
     // Set to all time
     const allTimeRange = {
@@ -206,32 +294,49 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     setDate(allTimeRange);
     
     // Create empty filters with just date range
-    const newFilters = createFilters('', 'all', 'all', allTimeRange, 'all keywords', []);
+    const newFilters = createFilters('all', 'all', allTimeRange, 'all keywords', 'all', {
+      keywords: [],
+      sources: [],
+      sentiments: [],
+      issues: []
+    });
     onFilterChange(newFilters);
   }
 
   // Badge clear button handlers
-  const handleClearKeyword = () => {
-    setKeyword('');
-    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, searchTags);
-    onFilterChange(newFilters);
-  }
-
-  const handleClearSelectedKeyword = () => {
-    setSelectedKeyword('all keywords');
-    const newFilters = createFilters(keyword, source, sentiment, date, 'all keywords', searchTags);
-    onFilterChange(newFilters);
-  }
-
-  const handleClearSource = () => {
-    setSource('all');
-    const newFilters = createFilters(keyword, 'all', sentiment, date, selectedKeyword, searchTags);
-    onFilterChange(newFilters);
-  }
-
-  const handleClearSentiment = () => {
-    setSentiment('all');
-    const newFilters = createFilters(keyword, source, 'all', date, selectedKeyword, searchTags);
+  const handleRemoveFilter = (type: 'keywords' | 'sources' | 'sentiments' | 'issues', value: string) => {
+    const newActiveFilters = { ...activeFilters };
+    
+    // Remove the value from the appropriate array
+    newActiveFilters[type] = newActiveFilters[type].filter(item => item !== value);
+    
+    // Update default dropdown values if needed
+    if (type === 'keywords' && newActiveFilters.keywords.length === 0) {
+      setSelectedKeyword('all keywords');
+    }
+    if (type === 'sources' && newActiveFilters.sources.length === 0) {
+      setSource('all');
+    }
+    if (type === 'sentiments' && newActiveFilters.sentiments.length === 0) {
+      setSentiment('all');
+    }
+    if (type === 'issues' && newActiveFilters.issues.length === 0) {
+      setAssignedIssue('all');
+    }
+    
+    // Update active filters
+    setActiveFilters(newActiveFilters);
+    
+    // Create new filters based on updated state
+    const newFilters = createFilters(
+      type === 'sources' && newActiveFilters.sources.length === 0 ? 'all' : source,
+      type === 'sentiments' && newActiveFilters.sentiments.length === 0 ? 'all' : sentiment,
+      date,
+      type === 'keywords' && newActiveFilters.keywords.length === 0 ? 'all keywords' : selectedKeyword,
+      type === 'issues' && newActiveFilters.issues.length === 0 ? 'all' : assignedIssue,
+      newActiveFilters
+    );
+    
     onFilterChange(newFilters);
   }
 
@@ -315,15 +420,6 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
     return isStartAllTime && isEndRecent;
   };
 
-  // Handle removing all search tags at once
-  const handleClearAllSearchTags = () => {
-    setSearchTags([]);
-    
-    // Update filters without the tags
-    const newFilters = createFilters('', source, sentiment, date, selectedKeyword, []);
-    onFilterChange(newFilters);
-  }
-
   return (
     <div className="space-y-4">
       <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
@@ -384,7 +480,8 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
           {isExpanded && (
             <div className="space-y-4">
               {/* Clear Filters button */}
-              {(searchTags.length > 0 || selectedKeyword !== 'all keywords' || source !== 'all' || sentiment !== 'all') && (
+              {(activeFilters.keywords.length > 0 || activeFilters.sources.length > 0 || 
+                activeFilters.sentiments.length > 0 || activeFilters.issues.length > 0) && (
                 <div className="flex justify-end">
                   <Button 
                     variant="outline" 
@@ -398,7 +495,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 md:gap-3">
                 <div>
                   <Label htmlFor="start-date" className="text-xs">Start Date</Label>
                   <div className="flex items-center mt-1">
@@ -482,55 +579,78 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Assigned Issue Dropdown */}
+                <div>
+                  <Label htmlFor="assigned-issue" className="text-xs">Assigned Issue</Label>
+                  <Select value={assignedIssue} onValueChange={handleAssignedIssueChange}>
+                    <SelectTrigger id="assigned-issue" className="mt-1 w-full">
+                      <SelectValue placeholder="All Issues" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Issues</SelectItem>
+                      {availableIssues.map((issue) => (
+                        <SelectItem key={issue} value={issue}>
+                          {issue}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              
+              {/* Active Filters Display */}
+              {(activeFilters.keywords.length > 0 || activeFilters.sources.length > 0 || 
+                activeFilters.sentiments.length > 0 || activeFilters.issues.length > 0) && (
+                <div className="mt-4 flex flex-wrap gap-2 items-center">
+                  <div className="flex items-center">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Active Filters:</span>
+                  </div>
+                  
+                  {activeFilters.keywords.map(keyword => (
+                    <Badge key={`keyword-${keyword}`} variant="secondary" className="flex items-center gap-1">
+                      {keyword}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleRemoveFilter('keywords', keyword)} 
+                      />
+                    </Badge>
+                  ))}
+                  
+                  {activeFilters.sources.map(src => (
+                    <Badge key={`source-${src}`} variant="secondary" className="flex items-center gap-1">
+                      {src}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleRemoveFilter('sources', src)} 
+                      />
+                    </Badge>
+                  ))}
+                  
+                  {activeFilters.sentiments.map(sent => (
+                    <Badge key={`sentiment-${sent}`} variant="secondary" className="flex items-center gap-1">
+                      {sent}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleRemoveFilter('sentiments', sent)} 
+                      />
+                    </Badge>
+                  ))}
+                  
+                  {activeFilters.issues.map(issue => (
+                    <Badge key={`issue-${issue}`} variant="secondary" className="flex items-center gap-1">
+                      {issue}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleRemoveFilter('issues', issue)} 
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Keyword Search Field */}
-      <div className="bg-card border rounded-lg p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-2">
-          <Label htmlFor="keyword-search" className="text-xs">Search by keyword</Label>
-          {searchTags.length > 0 && (
-            <button 
-              className="text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleClearAllSearchTags}
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-        <div className="flex items-center border rounded-md bg-background px-2">
-          <div className="flex-shrink h-9 min-w-[100px] w-auto">
-            <Input
-              id="keyword-search"
-              placeholder="Enter search term..."
-              value={keyword}
-              onChange={handleKeywordChange}
-              onKeyDown={handleKeywordKeyPress}
-              className="border-0 w-full h-9 focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-          </div>
-          <div className="flex-1 flex flex-wrap gap-1 py-1 pl-2">
-            {searchTags.map((tag, index) => (
-              <Badge 
-                key={`inline-tag-${index}`} 
-                variant="secondary" 
-                className="h-6 text-xs flex items-center gap-1 bg-muted"
-              >
-                {tag}
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => handleRemoveSearchTag(tag)}
-                  aria-label={`Remove ${tag} tag`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
         </div>
       </div>
     </div>

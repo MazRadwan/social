@@ -109,18 +109,17 @@ export default function DashboardPage() {
   const handleFilterChange = (newFilters: FilterOptions) => {
     console.log('Dashboard received new filters:', newFilters);
     
-    // Force immediate re-fetch with timestamp plus random value to ensure uniqueness
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 100000);
-    const forceUpdate = timestamp * 1000 + random;
+    // Force immediate re-fetch with timestamp
+    const forceUpdate = Date.now();
     
-    // Create a completely new filter object to avoid any reference issues
+    // Create a completely new filter object
     const updatedFilters: FilterOptions = {
       _forceUpdate: forceUpdate
     };
     
     // Handle date range with explicit new Date objects
     if (newFilters.dateRange) {
+      // New date range provided, use it
       const fromDate = new Date(
         newFilters.dateRange.from instanceof Date 
           ? newFilters.dateRange.from.getTime() 
@@ -141,12 +140,52 @@ export default function DashboardPage() {
         from: fromDate, 
         to: toDate 
       };
+    } else if (filters.dateRange) {
+      // No new date range, preserve existing one
+      updatedFilters.dateRange = {
+        from: new Date(filters.dateRange.from.getTime()),
+        to: new Date(filters.dateRange.to.getTime())
+      };
     }
     
-    // Copy other filter properties
-    if (newFilters.keyword) updatedFilters.keyword = newFilters.keyword;
-    if (newFilters.source) updatedFilters.source = newFilters.source;
-    if (newFilters.sentiment) updatedFilters.sentiment = newFilters.sentiment;
+    // Process keyword - direct check for property existence
+    if ('keyword' in newFilters) {
+      // If keyword property exists in newFilters, use its value
+      if (newFilters.keyword !== undefined && newFilters.keyword !== null) {
+        updatedFilters.keyword = newFilters.keyword;
+      }
+      // If keyword is explicitly null or undefined, don't add it to updatedFilters
+      // This ensures the property is removed when Clear All is clicked
+      console.log('Keyword in newFilters:', newFilters.keyword);
+    } else if (filters.keyword) {
+      // Preserve existing keyword if not explicitly addressed in newFilters
+      updatedFilters.keyword = filters.keyword;
+    }
+    
+    // Process other filters using the same pattern
+    if ('source' in newFilters) {
+      if (newFilters.source !== undefined) updatedFilters.source = newFilters.source;
+    } else if (filters.source) {
+      updatedFilters.source = filters.source;
+    }
+    
+    if ('sentiment' in newFilters) {
+      if (newFilters.sentiment !== undefined) updatedFilters.sentiment = newFilters.sentiment;
+    } else if (filters.sentiment) {
+      updatedFilters.sentiment = filters.sentiment;
+    }
+    
+    if ('tag' in newFilters) {
+      if (newFilters.tag !== undefined) updatedFilters.tag = newFilters.tag;
+    } else if (filters.tag) {
+      updatedFilters.tag = filters.tag;
+    }
+    
+    if ('assigned_issue' in newFilters) {
+      if (newFilters.assigned_issue !== undefined) updatedFilters.assigned_issue = newFilters.assigned_issue;
+    } else if (filters.assigned_issue) {
+      updatedFilters.assigned_issue = filters.assigned_issue;
+    }
     
     console.log('Setting new filters with force update:', updatedFilters);
     
@@ -226,7 +265,11 @@ export default function DashboardPage() {
           </Sidebar>
 
           <div className="flex flex-col flex-1">
-            <Header activeTab={activeTab} />
+            <Header 
+              activeTab={activeTab} 
+              onSearchChange={handleFilterChange}
+              initialFilters={filters}
+            />
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
               <main className="p-4 sm:p-5 md:p-7 relative w-full">
@@ -276,7 +319,9 @@ export default function DashboardPage() {
                         sentimentScore={sentimentSummary.total > 0 ? 
                           ((sentimentSummary.positive - sentimentSummary.negative) / sentimentSummary.total) : 0}
                         loading={sentimentLoading}
-                        dateLabel={`${filters.dateRange?.from.toLocaleDateString()} - ${filters.dateRange?.to.toLocaleDateString()}`} 
+                        dateLabel={filters.dateRange && filters.dateRange.from && filters.dateRange.to ? 
+                          `${filters.dateRange.from.toLocaleDateString()} - ${filters.dateRange.to.toLocaleDateString()}` : 
+                          'selected date range'} 
                       />
                     </div>
 

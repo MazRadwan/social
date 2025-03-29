@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Article, ArticleSentimentSummary, ArticlesBySource, ArticlesByTag, FilterOptions } from './types';
 
 /**
@@ -36,51 +36,40 @@ class ArticleService {
     if (!options) return articles;
     
     return articles.filter(article => {
-      // Filter by date range
-      if (options.dateRange) {
+      // Date range filter
+      if (options.dateRange && options.dateRange.from && options.dateRange.to) {
         const articleDate = new Date(article.published_date);
-        if (articleDate < options.dateRange.from || articleDate > options.dateRange.to) {
+        const { from, to } = options.dateRange;
+        
+        if (articleDate < from || articleDate > to) {
           return false;
         }
       }
       
-      // Filter by keyword (handling multiple terms with OR logic)
-      if (options.keyword) {
-        if (options.keyword.includes(' OR ')) {
-          // Split by OR and check if ANY of the keywords match (inclusive search)
-          const keywords = options.keyword.split(' OR ').map(term => term.trim().toLowerCase());
-          const hasAnyKeyword = keywords.some(keyword => 
-            article.title.toLowerCase().includes(keyword) ||
-            article.content.toLowerCase().includes(keyword) ||
-            (article.tags && article.tags.some(tag => tag && tag.toLowerCase().includes(keyword)))
-          );
-          
-          if (!hasAnyKeyword) return false;
-        } else {
-          // Single keyword search
-          const keyword = options.keyword.toLowerCase();
-          const hasKeyword = 
-            article.title.toLowerCase().includes(keyword) ||
-            article.content.toLowerCase().includes(keyword) ||
-            (article.tags && article.tags.some(tag => tag && tag.toLowerCase().includes(keyword)));
-          
-          if (!hasKeyword) return false;
-        }
+      // Keyword filter
+      if (options.keyword && options.keyword !== null) {
+        const keywords = options.keyword.split(' OR ').map(k => k.trim().toLowerCase());
+        const articleContent = (article.title + ' ' + article.content).toLowerCase();
+        
+        // Check if the article contains any of the keywords
+        const hasKeyword = keywords.some(keyword => 
+          articleContent.includes(keyword)
+        );
+        
+        if (!hasKeyword) return false;
       }
       
-      // Filter by specific tag
-      if (options.tag) {
-        if (!article.tags || !article.tags.some(tag => tag === options.tag)) {
-          return false;
-        }
-      }
-      
-      // Filter by source
+      // Source filter - can be single value or array
       if (options.source && article.source !== options.source) {
         return false;
       }
       
-      // Filter by sentiment (using the first sentiment analysis entry as dominant)
+      // Support for multiple sources
+      if (options.sources && options.sources.length > 0 && !options.sources.includes(article.source)) {
+        return false;
+      }
+      
+      // Sentiment filter - can be single value or array
       if (options.sentiment && article.sentiment_analysis && article.sentiment_analysis.length > 0) {
         // Check if any sentiment analysis matches the requested sentiment
         const hasSentiment = article.sentiment_analysis.some(
@@ -89,6 +78,38 @@ class ArticleService {
         if (!hasSentiment) return false;
       }
       
+      // Support for multiple sentiments
+      if (options.sentiments && options.sentiments.length > 0 && article.sentiment_analysis && article.sentiment_analysis.length > 0) {
+        const hasSentiment = article.sentiment_analysis.some(
+          analysis => options.sentiments && options.sentiments.includes(analysis.sentiment)
+        );
+        if (!hasSentiment) return false;
+      }
+      
+      // Tag filter - can be single value or array
+      if (options.tag && article.tags && !article.tags.includes(options.tag)) {
+        return false;
+      }
+      
+      // Support for multiple tags
+      if (options.tags && options.tags.length > 0) {
+        // If article has no tags or none of the requested tags, filter it out
+        if (!article.tags || !options.tags.some((tag: string) => article.tags && article.tags.includes(tag))) {
+          return false;
+        }
+      }
+      
+      // Assigned issue filter - can be single value or array
+      if (options.assigned_issue && article.assigned_issue !== options.assigned_issue) {
+        return false;
+      }
+      
+      // Support for multiple assigned issues
+      if (options.assigned_issues && options.assigned_issues.length > 0 && !options.assigned_issues.includes(article.assigned_issue || '')) {
+        return false;
+      }
+      
+      // Article passed all filters
       return true;
     });
   }

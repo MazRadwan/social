@@ -98,46 +98,18 @@ export function useArticles(initialFilters?: FilterOptions) {
         setError(null);
         
         try {
-          // Build query string from filters
-          const params = new URLSearchParams();
+          // Use POST method with body instead of query params
           const preparedFilters = prepareFiltersForAPI(initialFilters);
           
-          if (preparedFilters?.dateRange) {
-            // Format dates in ISO format
-            const fromDate = preparedFilters.dateRange.from;
-            const toDate = preparedFilters.dateRange.to;
-            
-            params.set('from', fromDate.toISOString());
-            params.set('to', toDate.toISOString());
-            
-            console.log('Setting date parameters:', {
-              from: fromDate.toISOString(),
-              to: toDate.toISOString()
-            });
-          }
+          console.log('Fetching articles with filters:', preparedFilters);
           
-          if (preparedFilters?.keyword) {
-            params.set('keyword', preparedFilters.keyword);
-          }
-          
-          if (preparedFilters?.source && preparedFilters.source !== 'all') {
-            params.set('source', preparedFilters.source);
-          }
-          
-          if (preparedFilters?.sentiment) {
-            // Only filter if this is a valid sentiment value (Positive, Neutral, Negative)
-            // The type in FilterOptions doesn't include 'all', but we need to handle it in the UI
-            const validSentiments: string[] = ['Positive', 'Neutral', 'Negative'];
-            if (validSentiments.includes(preparedFilters.sentiment)) {
-              params.set('sentiment', preparedFilters.sentiment);
-            }
-          }
-          
-          const queryString = params.toString();
-          const url = `/api/articles${queryString ? `?${queryString}` : ''}`;
-          
-          console.log('Fetching articles with URL:', url);
-          const response = await fetch(url);
+          const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(preparedFilters || {}),
+          });
           
           if (!response.ok) {
             throw new Error('Failed to fetch articles');
@@ -145,7 +117,7 @@ export function useArticles(initialFilters?: FilterOptions) {
           
           const responseData = await response.json();
           console.log('Articles response:', responseData);
-          setArticles(responseData.data || []);
+          setArticles(responseData.articles || []);
         } catch (err) {
           console.error('Error fetching articles:', err);
           setError(err instanceof Error ? err.message : 'An error occurred');

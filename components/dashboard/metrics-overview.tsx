@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Users, BarChart3, ThumbsUp, ThumbsDown } from 'lucide-react'
 
 interface MetricsOverviewProps {
   totalMentions: number
@@ -24,6 +25,7 @@ export function MetricsOverview({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Mentions</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -40,6 +42,7 @@ export function MetricsOverview({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Avg Sentiment Score</CardTitle>
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -56,6 +59,7 @@ export function MetricsOverview({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Positive Mentions</CardTitle>
+          <ThumbsUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -72,6 +76,7 @@ export function MetricsOverview({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Negative Mentions</CardTitle>
+          <ThumbsDown className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
