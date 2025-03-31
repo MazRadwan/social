@@ -287,9 +287,14 @@ export function ArticlesTable({
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-background rounded p-2">
                                   <div className="text-xs text-muted-foreground">Sentiment Score</div>
-                                  <div className="font-medium">
+                                  <div className={`text-2xl font-bold ${
+                                    getAverageSentimentScore(article) > 0 ? 'text-green-500' : 
+                                    getAverageSentimentScore(article) < 0 ? 'text-red-500' : 
+                                    'text-yellow-500'
+                                  }`}>
                                     {getAverageSentimentScore(article).toFixed(2)}
                                   </div>
+                                  <p className="text-xs text-muted-foreground">Scale -1 to 1</p>
                                 </div>
                                 <div className="bg-background rounded p-2">
                                   <div className="text-xs text-muted-foreground">Sentiment Breakdown</div>
