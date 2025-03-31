@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface DrillDownHeaderProps {
-  type: 'source' | 'sentiment' | 'issue' | null;
+  type: 'source' | 'sentiment' | 'issue' | 'date' | null;
   value: string | null;
   onExit: () => void;
 }
@@ -20,6 +20,8 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
                value === 'Negative' ? 'border-l-red-500' : 'border-l-yellow-500';
       case 'issue':
         return 'border-l-purple-500';
+      case 'date':
+        return 'border-l-indigo-500';
       default:
         return 'border-l-slate-500';
     }
@@ -40,6 +42,7 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
         {type === 'source' && `Source: ${value}`}
         {type === 'sentiment' && `Sentiment: ${value}`}
         {type === 'issue' && `Issue: ${value}`}
+        {type === 'date' && `Date: ${value}`}
       </div>
     </div>
   )

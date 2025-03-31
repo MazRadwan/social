@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from 'react'
+import { format, parseISO } from 'date-fns'
 import {
   LayoutDashboard,
   Database,
@@ -47,22 +48,19 @@ import { useTopIssues } from "@/hooks/use-article-data"
 import { useMentionsOverTime } from "@/hooks/use-article-data"
 import { useSentimentOverTime } from "@/hooks/use-article-data"
 
+// Define the interface for the drill-down state
+interface DrillDownState {
+  active: boolean;
+  type: 'source' | 'sentiment' | 'issue' | 'date' | null;
+  value: string | null;
+  previousFilters: FilterOptions | null;
+}
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
-  const [showTooltips, setShowTooltips] = useState(false) // Set to false to disable tutorial by default
+  const [showTooltips, setShowTooltips] = useState(false)
   const [currentTooltip, setCurrentTooltip] = useState(1)
-  const [drillDownState, setDrillDownState] = useState<{
-    active: boolean;
-    type: 'source' | 'sentiment' | 'issue' | null;
-    value: string | null;
-    previousFilters: FilterOptions | null;
-  }>({
-    active: false,
-    type: null,
-    value: null,
-    previousFilters: null
-  })
-
+  
   // Initialize date range with explicit dates for "all time"
   const allTimeStart = new Date(2000, 0, 1);
   allTimeStart.setHours(0, 0, 0, 0);
@@ -70,11 +68,19 @@ export default function DashboardPage() {
   const now = new Date();
   now.setHours(23, 59, 59, 999);
   
+  // State for filters and drill-down
   const [filters, setFilters] = useState<FilterOptions>({
     dateRange: {
       from: allTimeStart,
       to: now,
     },
+  })
+  
+  const [drillDownState, setDrillDownState] = useState<DrillDownState>({
+    active: false,
+    type: null,
+    value: null,
+    previousFilters: null
   })
 
   // Log initial filters for debugging
@@ -281,6 +287,42 @@ export default function DashboardPage() {
     setFilters(drillDownFilters);
   };
 
+  // Handle drill-down action for date from sentiment trend chart
+  const handleDateDrillDown = (date: string) => {
+    // Store current filters before replacing them
+    const previousFilters = { ...filters };
+    
+    // Parse the clicked date using parseISO to ensure correct timezone handling
+    const selectedDate = parseISO(date);
+    
+    // Create new filter focused just on the selected date
+    // Set the date range to the specific day (start to end of day)
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const drillDownFilters: FilterOptions = {
+      dateRange: {
+        from: startOfDay,
+        to: endOfDay
+      },
+      _forceUpdate: Date.now()
+    };
+    
+    // Update drill-down state
+    setDrillDownState({
+      active: true,
+      type: 'date',
+      value: format(selectedDate, 'MMM dd, yyyy'),
+      previousFilters: previousFilters
+    });
+    
+    // Apply the new filters
+    setFilters(drillDownFilters);
+  };
+
   // Handle exiting drill-down view
   const exitDrillDown = () => {
     if (drillDownState.previousFilters) {
@@ -452,6 +494,7 @@ export default function DashboardPage() {
                         key={`sentiment-trend-${filters._forceUpdate || 'initial'}`}
                         sentimentData={sentimentData} 
                         loading={sentimentTrendLoading} 
+                        onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
                       />
                       <MentionsChart 
                         key={`mentions-${filters._forceUpdate || 'initial'}`}
