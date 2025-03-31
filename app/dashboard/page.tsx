@@ -10,6 +10,7 @@ import {
   Save,
   Settings,
   LogOut,
+  ChevronLeft
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -49,6 +50,17 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [showTooltips, setShowTooltips] = useState(false) // Set to false to disable tutorial by default
   const [currentTooltip, setCurrentTooltip] = useState(1)
+  const [drillDownState, setDrillDownState] = useState<{
+    active: boolean;
+    type: 'source' | 'sentiment' | 'issue' | null;
+    value: string | null;
+    previousFilters: FilterOptions | null;
+  }>({
+    active: false,
+    type: null,
+    value: null,
+    previousFilters: null
+  })
 
   // Initialize date range with explicit dates for "all time"
   const allTimeStart = new Date(2000, 0, 1);
@@ -198,7 +210,64 @@ export default function DashboardPage() {
     
     // Set state with completely new object
     setFilters(updatedFilters);
+    
+    // Exit drill-down mode if we're changing filters manually
+    setDrillDownState({
+      active: false,
+      type: null,
+      value: null,
+      previousFilters: null
+    });
   }
+
+  // Handle drill-down action for source chart
+  const handleSourceDrillDown = (source: string) => {
+    // Store current filters before replacing them
+    const previousFilters = { ...filters };
+    
+    // Create new filter focused just on the selected source
+    const drillDownFilters: FilterOptions = {
+      source: source,
+      dateRange: filters.dateRange ? {
+        from: new Date(filters.dateRange.from.getTime()),
+        to: new Date(filters.dateRange.to.getTime())
+      } : {
+        from: allTimeStart,
+        to: now
+      },
+      _forceUpdate: Date.now()
+    };
+    
+    // Update drill-down state
+    setDrillDownState({
+      active: true,
+      type: 'source',
+      value: source,
+      previousFilters: previousFilters
+    });
+    
+    // Apply the new filters
+    setFilters(drillDownFilters);
+  };
+
+  // Handle exiting drill-down view
+  const exitDrillDown = () => {
+    if (drillDownState.previousFilters) {
+      // Restore previous filters
+      setFilters({
+        ...drillDownState.previousFilters,
+        _forceUpdate: Date.now()
+      });
+    }
+    
+    // Reset drill-down state
+    setDrillDownState({
+      active: false,
+      type: null,
+      value: null,
+      previousFilters: null
+    });
+  };
 
   // Handle skipping tutorial
   const handleSkipTutorial = () => {
@@ -297,25 +366,49 @@ export default function DashboardPage() {
                 {/* Dashboard Tab */}
                 {activeTab === "dashboard" && (
                   <div className="grid gap-4 sm:gap-6 w-full">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-muted-foreground">
-                          Monitoring keywords:{" "}
-                          {issues?.slice(0, 3).map((issue) => (
-                            <Badge key={issue.issue} variant="outline" className="ml-1">
-                              {issue.issue}
-                            </Badge>
-                          ))}
+                    {/* Drill-down title and back button when in drill-down mode */}
+                    {drillDownState.active && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={exitDrillDown}
+                            className="flex items-center gap-1"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span>Back to Overview</span>
+                          </Button>
+                          <div className="text-xl font-bold ml-2">
+                            {drillDownState.type === 'source' && `Source: ${drillDownState.value}`}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Filter Bar */}
-                    <FilterBar 
-                      onFilterChange={handleFilterChange} 
-                      availableSources={availableSources} 
-                      initialFilters={filters}
-                    />
+                    {!drillDownState.active && (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-muted-foreground">
+                            Monitoring keywords:{" "}
+                            {issues?.slice(0, 3).map((issue) => (
+                              <Badge key={issue.issue} variant="outline" className="ml-1">
+                                {issue.issue}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Filter Bar - show only when not in drill-down mode */}
+                    {!drillDownState.active && (
+                      <FilterBar 
+                        onFilterChange={handleFilterChange} 
+                        availableSources={availableSources} 
+                        initialFilters={filters}
+                      />
+                    )}
 
                     {/* Total Mentions */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-1">
@@ -352,7 +445,8 @@ export default function DashboardPage() {
                       <SourcesChart 
                         key={`sources-${filters._forceUpdate || 'initial'}`}
                         sourcesData={sources} 
-                        loading={sourcesLoading} 
+                        loading={sourcesLoading}
+                        onDrillDown={!drillDownState.active ? handleSourceDrillDown : undefined}
                       />
                       <SentimentChart 
                         key={`sentiment-${filters._forceUpdate || 'initial'}`}

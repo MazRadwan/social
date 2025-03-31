@@ -14,11 +14,13 @@ import { ArticlesBySource } from '@/lib/data/types'
 interface SourcesChartProps {
   sourcesData: ArticlesBySource[] | null
   loading: boolean
+  onDrillDown?: (source: string) => void
 }
 
 export function SourcesChart({
   sourcesData,
   loading,
+  onDrillDown,
 }: SourcesChartProps) {
   // Format the data for the chart
   const chartData = useMemo(() => {
@@ -59,6 +61,13 @@ export function SourcesChart({
     return colors[index % (colors.length - 1)] || colors[10]
   }
 
+  // Handle click on chart segments for drill-down
+  const handlePieClick = (data: any, index: number) => {
+    if (onDrillDown && data && data.name) {
+      onDrillDown(data.name);
+    }
+  }
+
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -71,6 +80,11 @@ export function SourcesChart({
           <p className="text-sm text-muted-foreground">
             <span className="font-semibold">{payload[0].value}</span> articles ({percentage}%)
           </p>
+          {onDrillDown && (
+            <p className="text-xs text-muted-foreground mt-1 italic">
+              Click to view details
+            </p>
+          )}
         </div>
       )
     }
@@ -103,6 +117,8 @@ export function SourcesChart({
                     dataKey="count"
                     nameKey="source"
                     stroke="none"
+                    onClick={onDrillDown ? handlePieClick : undefined}
+                    cursor={onDrillDown ? "pointer" : undefined}
                   >
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getSourceColor(entry.source, index)} />
@@ -115,7 +131,12 @@ export function SourcesChart({
             
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6">
               {chartData.map((entry, index) => (
-                <div key={`legend-${index}`} className="flex items-center">
+                <div 
+                  key={`legend-${index}`} 
+                  className="flex items-center" 
+                  onClick={onDrillDown ? () => onDrillDown(entry.source) : undefined}
+                  style={{ cursor: onDrillDown ? "pointer" : "default" }}
+                >
                   <div 
                     className="h-3 w-3 rounded-full mr-1" 
                     style={{ backgroundColor: getSourceColor(entry.source, index) }}
