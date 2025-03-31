@@ -418,6 +418,7 @@ export default function DashboardPage() {
               activeTab={activeTab} 
               onSearchChange={handleFilterChange}
               initialFilters={filters}
+              isDrillDown={drillDownState.active}
             />
             
             {drillDownState.active && (
