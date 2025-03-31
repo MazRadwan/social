@@ -480,6 +480,7 @@ export default function DashboardPage() {
                 {/* Dashboard Tab */}
                 {activeTab === "dashboard" && (
                   <div className="grid gap-4 sm:gap-6 w-full">
+                    {/* Commented out monitoring keywords section
                     {!drillDownState.active && (
                       <div className="flex items-center justify-between">
                         <div>
@@ -494,6 +495,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     )}
+                    */}
 
                     {!drillDownState.active && (
                       <FilterBar 

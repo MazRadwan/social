@@ -16,7 +16,7 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    router.push("/onboarding")
+    router.push("/dashboard")
   }
 
   return (
