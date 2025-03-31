@@ -329,7 +329,7 @@ export function IssueCloud({
                           left: 0,
                           transform: `translate(${bubble.x - bubble.radius}px, ${bubble.y - bubble.radius}px)`,
                           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                          zIndex: Math.round(bubble.count),
+                          zIndex: Math.min(10, Math.round(bubble.count)),
                         }}
                         onClick={() => onDrillDown && onDrillDown(bubble.issue)}
                       >
