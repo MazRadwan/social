@@ -499,6 +499,7 @@ export default function DashboardPage() {
                         mentionsData={mentions} 
                         loading={mentionsLoading} 
                         type="area"
+                        onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
                       />
                     </div>
 
