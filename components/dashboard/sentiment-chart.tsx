@@ -8,6 +8,7 @@ import { ArticleSentimentSummary } from '@/lib/data/types'
 interface SentimentChartProps {
   sentimentData: ArticleSentimentSummary
   loading: boolean
+  onDrillDown?: (sentiment: 'Positive' | 'Neutral' | 'Negative') => void
 }
 
 const CHART_COLORS = {
@@ -18,7 +19,7 @@ const CHART_COLORS = {
 }
 
 // Custom tooltip component for hovering over sentiment pie chart slices
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, onDrillDown }: any) => {
   console.log('Tooltip active:', active);
   console.log('Tooltip payload:', payload);
   
@@ -41,6 +42,11 @@ const CustomTooltip = ({ active, payload }: any) => {
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold">{value}</span> mentions ({percentage}%)
         </p>
+        {onDrillDown && (
+          <p className="text-xs text-muted-foreground mt-1 italic">
+            Click to view details
+          </p>
+        )}
       </div>
     );
   }
@@ -48,7 +54,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 }
 
-export function SentimentChart({ sentimentData, loading }: SentimentChartProps) {
+export function SentimentChart({ sentimentData, loading, onDrillDown }: SentimentChartProps) {
   // Format the data for the pie chart
   const chartData = useMemo(() => {
     const data = [
@@ -59,6 +65,13 @@ export function SentimentChart({ sentimentData, loading }: SentimentChartProps) 
     console.log('Chart Data:', data);
     return data;
   }, [sentimentData])
+
+  // Handle pie chart click for drill-down
+  const handlePieClick = (data: any) => {
+    if (onDrillDown && data && data.name) {
+      onDrillDown(data.name as 'Positive' | 'Neutral' | 'Negative');
+    }
+  }
 
   // Calculate percentages for display
   const total = sentimentData.total || chartData.reduce((acc, item) => acc + item.value, 0)
@@ -95,6 +108,8 @@ export function SentimentChart({ sentimentData, loading }: SentimentChartProps) 
                     nameKey="name"
                     stroke="none"
                     isAnimationActive={true}
+                    onClick={onDrillDown ? handlePieClick : undefined}
+                    cursor={onDrillDown ? "pointer" : undefined}
                     onMouseEnter={(data, index) => {
                       console.log('Mouse enter:', data, index);
                     }}
@@ -107,7 +122,7 @@ export function SentimentChart({ sentimentData, loading }: SentimentChartProps) 
                     ))}
                   </Pie>
                   <Tooltip 
-                    content={<CustomTooltip />}
+                    content={<CustomTooltip onDrillDown={onDrillDown} />}
                     wrapperStyle={{ zIndex: 100, pointerEvents: 'none' }}
                   />
                 </PieChart>
@@ -123,15 +138,27 @@ export function SentimentChart({ sentimentData, loading }: SentimentChartProps) 
             </div>
             
             <div className="flex gap-8 mt-6">
-              <div className="flex items-center">
+              <div 
+                className="flex items-center"
+                onClick={onDrillDown ? () => onDrillDown('Positive') : undefined}
+                style={{ cursor: onDrillDown ? "pointer" : "default" }}
+              >
                 <div className="h-3 w-3 rounded-full bg-[hsl(var(--chart-1))] mr-2"></div>
                 <span className="text-sm">Positive {Math.round(sentimentData.positive / total * 100)}%</span>
               </div>
-              <div className="flex items-center">
+              <div 
+                className="flex items-center"
+                onClick={onDrillDown ? () => onDrillDown('Neutral') : undefined}
+                style={{ cursor: onDrillDown ? "pointer" : "default" }}
+              >
                 <div className="h-3 w-3 rounded-full bg-[hsl(var(--chart-2))] mr-2"></div>
                 <span className="text-sm">Neutral {Math.round(sentimentData.neutral / total * 100)}%</span>
               </div>
-              <div className="flex items-center">
+              <div 
+                className="flex items-center"
+                onClick={onDrillDown ? () => onDrillDown('Negative') : undefined}
+                style={{ cursor: onDrillDown ? "pointer" : "default" }}
+              >
                 <div className="h-3 w-3 rounded-full bg-[hsl(var(--chart-3))] mr-2"></div>
                 <span className="text-sm">Negative {Math.round(sentimentData.negative / total * 100)}%</span>
               </div>

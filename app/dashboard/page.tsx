@@ -37,6 +37,7 @@ import { IssueCloud } from "@/components/dashboard/issue-cloud"
 import { ArticlesTable } from "@/components/dashboard/articles-table"
 import { MetricsOverview } from "@/components/dashboard/metrics-overview"
 import { SentimentTrendChart } from "@/components/dashboard/sentiment-trend-chart"
+import { DrillDownHeader } from "@/components/dashboard/drill-down-header"
 
 import { FilterOptions } from "@/lib/data/types"
 import { useArticles } from "@/hooks/use-article-data"
@@ -250,6 +251,36 @@ export default function DashboardPage() {
     setFilters(drillDownFilters);
   };
 
+  // Handle drill-down action for sentiment chart
+  const handleSentimentDrillDown = (sentiment: 'Positive' | 'Neutral' | 'Negative') => {
+    // Store current filters before replacing them
+    const previousFilters = { ...filters };
+    
+    // Create new filter focused just on the selected sentiment
+    const drillDownFilters: FilterOptions = {
+      sentiment: sentiment,
+      dateRange: filters.dateRange ? {
+        from: new Date(filters.dateRange.from.getTime()),
+        to: new Date(filters.dateRange.to.getTime())
+      } : {
+        from: allTimeStart,
+        to: now
+      },
+      _forceUpdate: Date.now()
+    };
+    
+    // Update drill-down state
+    setDrillDownState({
+      active: true,
+      type: 'sentiment',
+      value: sentiment,
+      previousFilters: previousFilters
+    });
+    
+    // Apply the new filters
+    setFilters(drillDownFilters);
+  };
+
   // Handle exiting drill-down view
   const exitDrillDown = () => {
     if (drillDownState.previousFilters) {
@@ -347,6 +378,14 @@ export default function DashboardPage() {
               initialFilters={filters}
             />
             
+            {drillDownState.active && (
+              <DrillDownHeader
+                type={drillDownState.type}
+                value={drillDownState.value}
+                onExit={exitDrillDown}
+              />
+            )}
+            
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
               <main className="p-4 sm:p-5 md:p-7 relative w-full">
                 {/* Dashboard Tooltips */}
@@ -366,25 +405,7 @@ export default function DashboardPage() {
                 {/* Dashboard Tab */}
                 {activeTab === "dashboard" && (
                   <div className="grid gap-4 sm:gap-6 w-full">
-                    {/* Drill-down title and back button when in drill-down mode */}
-                    {drillDownState.active && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={exitDrillDown}
-                            className="flex items-center gap-1"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            <span>Back to Overview</span>
-                          </Button>
-                          <div className="text-xl font-bold ml-2">
-                            {drillDownState.type === 'source' && `Source: ${drillDownState.value}`}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {/* Remove drill-down header from here, moved to top of scroll container */}
 
                     {!drillDownState.active && (
                       <div className="flex items-center justify-between">
@@ -452,6 +473,7 @@ export default function DashboardPage() {
                         key={`sentiment-${filters._forceUpdate || 'initial'}`}
                         sentimentData={sentimentSummary} 
                         loading={sentimentLoading} 
+                        onDrillDown={!drillDownState.active ? handleSentimentDrillDown : undefined}
                       />
                       <IssueCloud 
                         key={`issues-${filters._forceUpdate || 'initial'}`}
@@ -479,11 +501,13 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Filter Bar */}
-                    <FilterBar 
-                      onFilterChange={handleFilterChange} 
-                      availableSources={availableSources} 
-                      initialFilters={filters}
-                    />
+                    {!drillDownState.active && (
+                      <FilterBar 
+                        onFilterChange={handleFilterChange} 
+                        availableSources={availableSources} 
+                        initialFilters={filters}
+                      />
+                    )}
 
                     {/* All Articles Table */}
                     <ArticlesTable 
