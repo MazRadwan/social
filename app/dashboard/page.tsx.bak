@@ -421,7 +421,7 @@ export default function DashboardPage() {
             />
             
             {drillDownState.active && (
-              <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-sm">
+              <div className="fixed top-14 left-0 md:left-[14rem] right-0 z-30 transition-transform duration-200 ease-in-out">
                 <DrillDownHeader
                   type={drillDownState.type}
                   value={drillDownState.value}
@@ -431,7 +431,7 @@ export default function DashboardPage() {
             )}
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
-              <main className="p-4 sm:p-5 md:p-7 relative w-full">
+              <main className={`p-4 sm:p-5 md:p-7 relative w-full ${drillDownState.active ? 'pt-14' : ''}`}>
                 {/* Dashboard Tooltips */}
                 {showTooltips && (
                   <>
@@ -522,52 +522,4 @@ export default function DashboardPage() {
                     </div>
 
                     <ArticlesTable 
-                      key={`articles-${filters._forceUpdate || 'initial'}`}
-                      articles={articles} 
-                      loading={articlesLoading} 
-                      pageSize={10}
-                    />
-                  </div>
-                )}
-
-                {/* All Data Tab */}
-                {activeTab === "all-data" && (
-                  <div className="grid gap-6">
-                      <div>
-                        <h2 className="text-2xl font-bold tracking-tight">All Data</h2>
-                        <p className="text-muted-foreground">View and filter all mentions across platforms</p>
-                    </div>
-
-                    {!drillDownState.active && (
-                      <FilterBar 
-                        onFilterChange={handleFilterChange} 
-                        availableSources={availableSources} 
-                        initialFilters={filters}
-                      />
-                    )}
-
-                    <ArticlesTable 
-                      articles={articles} 
-                      loading={articlesLoading} 
-                      pageSize={20}
-                    />
-                  </div>
-                )}
-
-                {/* Placeholder for other tabs */}
-                {(activeTab === "ai-summary" || activeTab === "issue-themes" || activeTab === "settings") && (
-                  <div className="grid place-items-center h-[50vh]">
-                    <div className="text-center">
-                      <h3 className="text-xl font-semibold mb-2">{activeTab} Tab</h3>
-                      <p className="text-muted-foreground">This section is under development</p>
-                    </div>
-                  </div>
-                )}
-              </main>
-            </div>
-          </div>
-        </div>
-      </SidebarProvider>
-    </TooltipProvider>
-  )
-}
+                      key={`articles-${filters._forceUpdate || 'initial'}`

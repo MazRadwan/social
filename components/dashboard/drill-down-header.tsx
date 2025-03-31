@@ -28,7 +28,7 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
   };
 
   return (
-    <div className={`py-3 px-4 bg-background dark:bg-background shadow-sm border-b border-l-4 ${getAccentClass()} flex items-center`}>
+    <div className={`py-3 px-4 bg-background/80 dark:bg-background/80 backdrop-blur-sm shadow-md border-b border-l-4 ${getAccentClass()} flex items-center w-full`}>
       <Button 
         variant="ghost" 
         size="sm" 
