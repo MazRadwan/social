@@ -25,6 +25,7 @@ interface SentimentDataPoint {
 interface SentimentTrendChartProps {
   sentimentData: SentimentDataPoint[] | null
   loading: boolean
+  onDrillDown?: (date: string) => void
 }
 
 const CHART_COLORS = {
@@ -37,6 +38,7 @@ const CHART_COLORS = {
 export function SentimentTrendChart({
   sentimentData,
   loading,
+  onDrillDown,
 }: SentimentTrendChartProps) {
   // State to track which lines are visible
   const [visibleLines, setVisibleLines] = useState({
@@ -58,6 +60,14 @@ export function SentimentTrendChart({
       }))
   }, [sentimentData])
 
+  // Handle click on data point for drill-down
+  const handleDataPointClick = (data: any) => {
+    if (onDrillDown && data && data.activePayload && data.activePayload[0]) {
+      const date = data.activePayload[0].payload.date;
+      onDrillDown(date);
+    }
+  }
+
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -69,6 +79,11 @@ export function SentimentTrendChart({
               {entry.name}: <span className="font-medium">{entry.name === 'Sentiment Score' ? entry.value.toFixed(2) : entry.value}</span>
             </p>
           ))}
+          {onDrillDown && (
+            <p className="text-xs text-muted-foreground mt-1 italic">
+              Click to view details for this date
+            </p>
+          )}
         </div>
       )
     }
@@ -99,7 +114,12 @@ export function SentimentTrendChart({
         ) : chartData.length > 0 ? (
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart 
+                data={chartData} 
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                onClick={onDrillDown ? handleDataPointClick : undefined}
+                style={{ cursor: onDrillDown ? 'pointer' : 'default' }}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="date"

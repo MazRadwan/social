@@ -13,9 +13,10 @@ interface HeaderProps {
   activeTab: string
   onSearchChange?: (filters: FilterOptions) => void
   initialFilters?: FilterOptions
+  isDrillDown?: boolean
 }
 
-export function Header({ activeTab, onSearchChange, initialFilters }: HeaderProps) {
+export function Header({ activeTab, onSearchChange, initialFilters, isDrillDown }: HeaderProps) {
   const [keyword, setKeyword] = useState<string>(initialFilters?.keyword || '')
   const [searchTags, setSearchTags] = useState<string[]>([])
 
@@ -154,7 +155,7 @@ export function Header({ activeTab, onSearchChange, initialFilters }: HeaderProp
   }
 
   return (
-    <div className="sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-md dark:border-border">
+    <div className={`sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${isDrillDown ? 'shadow-none dark:shadow-md' : 'shadow-md'} dark:border-border`}>
       <div className="flex h-14 items-center gap-4 px-6">
         <SidebarTrigger />
         <div className="flex items-center gap-2">

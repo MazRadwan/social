@@ -20,12 +20,14 @@ interface MentionsChartProps {
   mentionsData: { date: string; count: number }[] | null
   loading: boolean
   type?: 'line' | 'area'
+  onDrillDown?: (date: string) => void
 }
 
 export function MentionsChart({
   mentionsData,
   loading,
-  type = 'line'
+  type = 'line',
+  onDrillDown
 }: MentionsChartProps) {
   // Format the data for the chart
   const chartData = useMemo(() => {
@@ -40,6 +42,14 @@ export function MentionsChart({
       }))
   }, [mentionsData])
 
+  // Handle click on data point for drill-down
+  const handleDataPointClick = (data: any) => {
+    if (onDrillDown && data && data.activePayload && data.activePayload[0]) {
+      const date = data.activePayload[0].payload.date;
+      onDrillDown(date);
+    }
+  }
+
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -49,6 +59,11 @@ export function MentionsChart({
           <p>
             Mentions: <span className="font-medium">{payload[0].value}</span>
           </p>
+          {onDrillDown && (
+            <p className="text-xs text-muted-foreground mt-1 italic">
+              Click to view details for this date
+            </p>
+          )}
         </div>
       )
     }
@@ -70,7 +85,11 @@ export function MentionsChart({
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               {type === 'line' ? (
-                <LineChart data={chartData}>
+                <LineChart 
+                  data={chartData}
+                  onClick={onDrillDown ? handleDataPointClick : undefined}
+                  style={{ cursor: onDrillDown ? 'pointer' : 'default' }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -93,7 +112,11 @@ export function MentionsChart({
                   />
                 </LineChart>
               ) : (
-                <AreaChart data={chartData}>
+                <AreaChart 
+                  data={chartData}
+                  onClick={onDrillDown ? handleDataPointClick : undefined}
+                  style={{ cursor: onDrillDown ? 'pointer' : 'default' }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="date"
