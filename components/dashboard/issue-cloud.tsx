@@ -3,15 +3,23 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArticlesByIssue } from '@/lib/data/types'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface IssueCloudProps {
   issuesData: ArticlesByIssue[] | null
   loading: boolean
+  onDrillDown?: (issue: string) => void
 }
 
 export function IssueCloud({
   issuesData,
-  loading
+  loading,
+  onDrillDown
 }: IssueCloudProps) {
   // Ref for the container to get dimensions
   const containerRef = useRef<HTMLDivElement>(null);
@@ -307,33 +315,48 @@ export function IssueCloud({
           <div className="h-[300px] relative" ref={containerRef}>
             {/* Bubble cloud visualization */}
             <div className="w-full h-full relative">
-              {placedBubbles.map((bubble) => (
-                <div
-                  key={bubble.issue}
-                  className="rounded-full absolute flex items-center justify-center transition-all duration-300 hover:opacity-90 cursor-pointer"
-                  style={{
-                    width: `${bubble.size}px`,
-                    height: `${bubble.size}px`,
-                    backgroundColor: bubble.color,
-                    top: 0,
-                    left: 0,
-                    transform: `translate(${bubble.x - bubble.radius}px, ${bubble.y - bubble.radius}px)`,
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    zIndex: Math.round(bubble.count),
-                  }}
-                >
-                  <div 
-                    className="text-center font-medium px-2"
-                    style={{ 
-                      color: bubble.fontColor,
-                      fontSize: `${Math.max(10, bubble.size / 6)}px`,
-                      lineHeight: 1.2
-                    }}
-                  >
-                    {bubble.displayText}
-                  </div>
-                </div>
-              ))}
+              <TooltipProvider>
+                {placedBubbles.map((bubble) => (
+                  <Tooltip key={bubble.issue}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="rounded-full absolute flex items-center justify-center transition-all duration-300 hover:opacity-90 cursor-pointer"
+                        style={{
+                          width: `${bubble.size}px`,
+                          height: `${bubble.size}px`,
+                          backgroundColor: bubble.color,
+                          top: 0,
+                          left: 0,
+                          transform: `translate(${bubble.x - bubble.radius}px, ${bubble.y - bubble.radius}px)`,
+                          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                          zIndex: Math.round(bubble.count),
+                        }}
+                        onClick={() => onDrillDown && onDrillDown(bubble.issue)}
+                      >
+                        <div 
+                          className="text-center font-medium px-2"
+                          style={{ 
+                            color: bubble.fontColor,
+                            fontSize: `${Math.max(10, bubble.size / 6)}px`,
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {bubble.displayText}
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{bubble.issue}</span>
+                        <span className="text-xs text-muted-foreground">{bubble.count} mentions</span>
+                        {onDrillDown && (
+                          <span className="text-xs italic mt-1">Click to view details</span>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
             </div>
           </div>
         ) : (

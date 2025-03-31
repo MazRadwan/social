@@ -323,6 +323,36 @@ export default function DashboardPage() {
     setFilters(drillDownFilters);
   };
 
+  // Handle drill-down action for issue from issue cloud
+  const handleIssueDrillDown = (issue: string) => {
+    // Store current filters before replacing them
+    const previousFilters = { ...filters };
+    
+    // Create new filter focused just on the selected issue
+    const drillDownFilters: FilterOptions = {
+      assigned_issue: issue,
+      dateRange: filters.dateRange ? {
+        from: new Date(filters.dateRange.from.getTime()),
+        to: new Date(filters.dateRange.to.getTime())
+      } : {
+        from: allTimeStart,
+        to: now
+      },
+      _forceUpdate: Date.now()
+    };
+    
+    // Update drill-down state
+    setDrillDownState({
+      active: true,
+      type: 'issue',
+      value: issue,
+      previousFilters: previousFilters
+    });
+    
+    // Apply the new filters
+    setFilters(drillDownFilters);
+  };
+
   // Handle exiting drill-down view
   const exitDrillDown = () => {
     if (drillDownState.previousFilters) {
@@ -520,6 +550,7 @@ export default function DashboardPage() {
                         key={`issues-${filters._forceUpdate || 'initial'}`}
                         issuesData={issues} 
                         loading={issuesLoading} 
+                        onDrillDown={!drillDownState.active ? handleIssueDrillDown : undefined}
                       />
                     </div>
 
