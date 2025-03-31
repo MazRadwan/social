@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, ExternalLink, ChevronDown, Maximize2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, ChevronDown, Maximize2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import { Article } from '@/lib/data/types'
 import { cn } from '@/lib/utils'
 import React from 'react'
+
+// Define sort types
+type SortColumn = 'title' | 'source' | 'date' | 'sentiment' | null;
+type SortDirection = 'asc' | 'desc' | null;
 
 interface ArticlesTableProps {
   articles: Article[] | null
@@ -24,13 +28,8 @@ export function ArticlesTable({
 }: ArticlesTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
-  
-  // Calculate pagination values
-  const totalArticles = articles?.length || 0
-  const totalPages = Math.ceil(totalArticles / pageSize)
-  const startIndex = (currentPage - 1) * pageSize
-  const endIndex = Math.min(startIndex + pageSize, totalArticles)
-  const currentArticles = articles?.slice(startIndex, endIndex) || []
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   
   // Toggle row expansion
   const toggleRowExpansion = (index: number) => {
@@ -69,6 +68,80 @@ export function ArticlesTable({
     )
     
     return totalScore / article.sentiment_analysis.length
+  }
+  
+  // Toggle sorting for a column
+  const toggleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Cycle through: asc -> desc -> no sort
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else if (sortDirection === 'desc') {
+        setSortColumn(null)
+        setSortDirection(null)
+      }
+    } else {
+      // New column, start with ascending
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+  
+  // Get sorted articles
+  const getSortedArticles = () => {
+    if (!articles || !sortColumn || !sortDirection) {
+      return articles || []
+    }
+    
+    return [...articles].sort((a, b) => {
+      let valueA, valueB;
+      
+      if (sortColumn === 'title') {
+        valueA = a.title.toLowerCase()
+        valueB = b.title.toLowerCase()
+      } else if (sortColumn === 'source') {
+        valueA = a.source.toLowerCase()
+        valueB = b.source.toLowerCase()
+      } else if (sortColumn === 'date') {
+        valueA = new Date(a.published_date).getTime()
+        valueB = new Date(b.published_date).getTime()
+      } else if (sortColumn === 'sentiment') {
+        valueA = getPredominantSentiment(a)
+        valueB = getPredominantSentiment(b)
+      } else {
+        return 0
+      }
+      
+      // Sort direction
+      const multiplier = sortDirection === 'asc' ? 1 : -1
+      
+      // Handle string comparison
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return multiplier * valueA.localeCompare(valueB)
+      }
+      
+      // Handle number comparison
+      return multiplier * ((valueA as number) - (valueB as number))
+    })
+  }
+  
+  // Calculate pagination values with sorted articles
+  const sortedArticles = getSortedArticles()
+  const totalArticles = sortedArticles.length
+  const totalPages = Math.ceil(totalArticles / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, totalArticles)
+  const currentArticles = sortedArticles.slice(startIndex, endIndex)
+  
+  // Get sort icon for column header
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />
+    }
+    
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="ml-2 h-4 w-4" /> : 
+      <ArrowDown className="ml-2 h-4 w-4" />
   }
   
   // Get badge variant based on sentiment
@@ -122,10 +195,30 @@ export function ArticlesTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Sentiment</TableHead>
+                <TableHead onClick={() => toggleSort('title')} className="cursor-pointer hover:bg-muted/60">
+                  <div className="flex items-center">
+                    Title
+                    {getSortIcon('title')}
+                  </div>
+                </TableHead>
+                <TableHead onClick={() => toggleSort('source')} className="cursor-pointer hover:bg-muted/60">
+                  <div className="flex items-center">
+                    Source
+                    {getSortIcon('source')}
+                  </div>
+                </TableHead>
+                <TableHead onClick={() => toggleSort('date')} className="cursor-pointer hover:bg-muted/60">
+                  <div className="flex items-center">
+                    Date
+                    {getSortIcon('date')}
+                  </div>
+                </TableHead>
+                <TableHead onClick={() => toggleSort('sentiment')} className="cursor-pointer hover:bg-muted/60">
+                  <div className="flex items-center">
+                    Sentiment
+                    {getSortIcon('sentiment')}
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -170,7 +263,7 @@ export function ArticlesTable({
                     </TableRow>
                     
                     {isExpanded && (
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableRow className="bg-muted/40 dark:bg-muted/60 hover:bg-muted/40 dark:hover:bg-muted/60 border-t border-b border-muted">
                         <TableCell colSpan={4} className="p-4">
                           <div className="space-y-4">
                             {/* Tags section */}
