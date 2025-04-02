@@ -392,75 +392,97 @@ export function useMentionsOverTime(filters?: FilterOptions) {
   return { mentions, loading, error };
 }
 
+// Add a getFilteredArticles helper function
+async function getFilteredArticles(filters?: FilterOptions): Promise<Article[]> {
+  try {
+    const preparedFilters = prepareFiltersForAPI(filters);
+    
+    const response = await fetch('/api/articles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(preparedFilters || {}),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch articles');
+    }
+    
+    const responseData = await response.json();
+    return responseData.articles || [];
+  } catch (err) {
+    console.error('Error in getFilteredArticles:', err);
+    return [];
+  }
+}
+
 // Hook for fetching top issues
-export function useTopIssues(filters?: FilterOptions, limit: number = 5) {
+export function useTopIssues(filters: FilterOptions, limit = 10): { 
+  issues: ArticlesByIssue[] | null; 
+  loading: boolean;
+  error: string | null;
+} {
   const [issues, setIssues] = useState<ArticlesByIssue[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const previousFiltersRef = useRef<FilterOptions | undefined>(filters);
-  const previousLimitRef = useRef<number>(limit);
-  const isFirstRenderRef = useRef<boolean>(true);
   
   useEffect(() => {
-    console.log("useTopIssues effect called with filters:", filters, "and limit:", limit);
-    console.log("useTopIssues comparing with previous filters:", previousFiltersRef.current);
-    
-    // Always fetch on first render or if filters/limit changed
-    if (isFirstRenderRef.current || !isEqual(filters, previousFiltersRef.current) || limit !== previousLimitRef.current) {
-      console.log("useTopIssues: fetching data due to changes or first render");
-      isFirstRenderRef.current = false;
-      previousFiltersRef.current = filters;
-      previousLimitRef.current = limit;
-      
-      const fetchIssues = async () => {
+    const fetchData = async () => {
+      try {
         setLoading(true);
         setError(null);
         
-        try {
-          const preparedFilters = prepareFiltersForAPI(filters);
-          console.log("useTopIssues: prepared filters:", preparedFilters);
+        // Get articles filtered by current filters
+        const filteredArticles = await getFilteredArticles(filters);
+        
+        // Get issue counts
+        const issueCounts: { [key: string]: { count: number, positive: number, negative: number } } = {};
+        
+        filteredArticles.forEach((article: Article) => {
+          const issue = article.assigned_issue || 'Unassigned';
           
-          // Add the action parameter to specify we want top issues
-          const requestBody: any = {
-            action: 'top_issues',
-            filters: preparedFilters,
-            limit
-          };
-          
-          console.log("useTopIssues: sending request with body:", requestBody);
-          
-          const response = await fetch('/api/articles', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch top issues');
+          if (!issueCounts[issue]) {
+            issueCounts[issue] = { count: 0, positive: 0, negative: 0 };
           }
           
-          const responseData = await response.json();
-          console.log("useTopIssues: received response:", responseData);
-          setIssues(responseData.data?.issues || []);
-        } catch (err) {
-          console.error("useTopIssues: error fetching data:", err);
-          setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      fetchIssues();
-    }
+          issueCounts[issue].count += 1;
+          
+          // Count positive and negative mentions
+          article.sentiment_analysis.forEach((sa: { sentiment: string }) => {
+            if (sa.sentiment === 'Positive') {
+              issueCounts[issue].positive += 1;
+            } else if (sa.sentiment === 'Negative') {
+              issueCounts[issue].negative += 1;
+            }
+          });
+        });
+        
+        // Transform to array and sort by count
+        const issuesArray = Object.keys(issueCounts).map(issue => ({
+          issue,
+          count: issueCounts[issue].count,
+          positive: issueCounts[issue].positive,
+          negative: issueCounts[issue].negative
+        }));
+        
+        // Sort by count (descending)
+        issuesArray.sort((a, b) => b.count - a.count);
+        
+        // Return top N issues
+        setIssues(issuesArray.slice(0, limit));
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching top issues:', error);
+        setError('Failed to fetch issues data');
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, [filters, limit]);
-  
-  // Debug - log state on each render
-  useEffect(() => {
-    console.log("useTopIssues current state:", { issues, loading, error });
-  }, [issues, loading, error]);
-  
+
   return { issues, loading, error };
 }
 

@@ -39,6 +39,7 @@ import { ArticlesTable } from "@/components/dashboard/articles-table"
 import { MetricsOverview } from "@/components/dashboard/metrics-overview"
 import { SentimentTrendChart } from "@/components/dashboard/sentiment-trend-chart"
 import { DrillDownHeader } from "@/components/dashboard/drill-down-header"
+import { IssuesChart } from "@/components/dashboard/issues-chart"
 
 import { FilterOptions } from "@/lib/data/types"
 import { useArticles } from "@/hooks/use-article-data"
@@ -53,6 +54,7 @@ interface DrillDownState {
   active: boolean;
   type: 'source' | 'sentiment' | 'issue' | 'date' | null;
   value: string | null;
+  subValue?: 'positive' | 'negative' | null;
   previousFilters: FilterOptions | null;
 }
 
@@ -323,12 +325,12 @@ export default function DashboardPage() {
     setFilters(drillDownFilters);
   };
 
-  // Handle drill-down action for issue from issue cloud
-  const handleIssueDrillDown = (issue: string) => {
+  // Handle drill-down action for issue
+  const handleIssueDrillDown = (issue: string, sentimentType?: 'positive' | 'negative') => {
     // Store current filters before replacing them
     const previousFilters = { ...filters };
     
-    // Create new filter focused just on the selected issue
+    // Create new filter focused on the selected issue
     const drillDownFilters: FilterOptions = {
       assigned_issue: issue,
       dateRange: filters.dateRange ? {
@@ -341,11 +343,17 @@ export default function DashboardPage() {
       _forceUpdate: Date.now()
     };
     
+    // If sentiment type is specified, add it to the filters
+    if (sentimentType) {
+      drillDownFilters.sentiment = sentimentType === 'positive' ? 'Positive' : 'Negative';
+    }
+    
     // Update drill-down state
     setDrillDownState({
       active: true,
       type: 'issue',
       value: issue,
+      subValue: sentimentType || null,
       previousFilters: previousFilters
     });
     
@@ -456,6 +464,7 @@ export default function DashboardPage() {
                 <DrillDownHeader
                   type={drillDownState.type}
                   value={drillDownState.value}
+                  subValue={drillDownState.subValue}
                   onExit={exitDrillDown}
                 />
               </div>
@@ -526,12 +535,28 @@ export default function DashboardPage() {
                         loading={sentimentTrendLoading} 
                         onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
                       />
+                      <IssuesChart
+                        key={`issues-${filters._forceUpdate || 'initial'}`}
+                        issuesData={issues?.map(issue => ({
+                          issue: issue.issue,
+                          positive: issue.positive || 0,
+                          negative: issue.negative || 0
+                        })) || null}
+                        loading={issuesLoading}
+                        onDrillDown={!drillDownState.active ? handleIssueDrillDown : undefined}
+                        isDrillDown={drillDownState.active && drillDownState.type === 'issue'}
+                        activeSentiment={drillDownState.subValue}
+                      />
+                    </div>
+
+                    <div className="hidden">
                       <MentionsChart 
                         key={`mentions-${filters._forceUpdate || 'initial'}`}
                         mentionsData={mentions} 
                         loading={mentionsLoading} 
                         type="area"
                         onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
+                        disabled={true}
                       />
                     </div>
 

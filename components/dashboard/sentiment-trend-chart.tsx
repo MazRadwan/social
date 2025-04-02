@@ -72,15 +72,22 @@ export function SentimentTrendChart({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-background border rounded-md shadow-md p-2 text-sm">
-          <p className="font-medium">{format(parseISO(label), 'MMM dd, yyyy')}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={`item-${index}`} style={{ color: entry.stroke || entry.color }}>
-              {entry.name}: <span className="font-medium">{entry.name === 'Sentiment Score' ? entry.value.toFixed(2) : entry.value}</span>
-            </p>
-          ))}
+        <div className="bg-background/95 dark:bg-gray-900/95 border border-border dark:border-gray-700 rounded-md shadow-md p-3 text-sm backdrop-blur-sm">
+          <p className="font-medium mb-1">{format(parseISO(label), 'MMM dd, yyyy')}</p>
+          {payload.map((entry: any, index: number) => {
+            const dataKey = entry.dataKey as string;
+            const color = dataKey === 'positive' ? 'text-green-500' : 
+                          dataKey === 'negative' ? 'text-red-400' : 
+                          dataKey === 'neutral' ? 'text-yellow-500' : 'text-blue-500';
+            
+            return (
+              <p key={`item-${index}`} className={color}>
+                {entry.name}: <span className="font-medium">{entry.name === 'Sentiment Score' ? entry.value.toFixed(2) : entry.value}</span>
+              </p>
+            )
+          })}
           {onDrillDown && (
-            <p className="text-xs text-muted-foreground mt-1 italic">
+            <p className="text-xs text-muted-foreground mt-2 italic">
               Click to view details for this date
             </p>
           )}
@@ -116,7 +123,7 @@ export function SentimentTrendChart({
             <ResponsiveContainer width="100%" height="100%">
               <LineChart 
                 data={chartData} 
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
                 onClick={onDrillDown ? handleDataPointClick : undefined}
                 style={{ cursor: onDrillDown ? 'pointer' : 'default' }}
               >
@@ -124,20 +131,24 @@ export function SentimentTrendChart({
                 <XAxis
                   dataKey="date"
                   tickFormatter={(date) => format(parseISO(date), 'MMM dd')}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
+                  minTickGap={15}
+                  padding={{ left: 0, right: 0 }}
                 />
                 <YAxis
                   yAxisId="left"
                   allowDecimals={false}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
                   domain={[0, 'auto']}
+                  width={25}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
                   domain={[-1, 1]}
                   tickFormatter={(value) => value.toFixed(1)}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
+                  width={25}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend 

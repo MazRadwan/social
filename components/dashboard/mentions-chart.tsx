@@ -21,14 +21,19 @@ interface MentionsChartProps {
   loading: boolean
   type?: 'line' | 'area'
   onDrillDown?: (date: string) => void
+  disabled?: boolean
 }
 
 export function MentionsChart({
   mentionsData,
   loading,
   type = 'line',
-  onDrillDown
+  onDrillDown,
+  disabled = false
 }: MentionsChartProps) {
+  // If disabled, return null
+  if (disabled) return null
+  
   // Format the data for the chart
   const chartData = useMemo(() => {
     if (!mentionsData) return []
