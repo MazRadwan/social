@@ -38,6 +38,8 @@ export interface ArticlesByTag {
 export interface ArticlesByIssue {
   issue: string;
   count: number;
+  positive?: number;
+  negative?: number;
 }
 
 export interface SentimentOverTime {

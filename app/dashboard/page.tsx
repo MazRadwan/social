@@ -39,6 +39,7 @@ import { ArticlesTable } from "@/components/dashboard/articles-table"
 import { MetricsOverview } from "@/components/dashboard/metrics-overview"
 import { SentimentTrendChart } from "@/components/dashboard/sentiment-trend-chart"
 import { DrillDownHeader } from "@/components/dashboard/drill-down-header"
+import { IssuesChart } from "@/components/dashboard/issues-chart"
 
 import { FilterOptions } from "@/lib/data/types"
 import { useArticles } from "@/hooks/use-article-data"
@@ -323,7 +324,7 @@ export default function DashboardPage() {
     setFilters(drillDownFilters);
   };
 
-  // Handle drill-down action for issue from issue cloud
+  // Handle drill-down action for issue
   const handleIssueDrillDown = (issue: string) => {
     // Store current filters before replacing them
     const previousFilters = { ...filters };
@@ -526,12 +527,26 @@ export default function DashboardPage() {
                         loading={sentimentTrendLoading} 
                         onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
                       />
+                      <IssuesChart
+                        key={`issues-${filters._forceUpdate || 'initial'}`}
+                        issuesData={issues?.map(issue => ({
+                          issue: issue.issue,
+                          positive: issue.positive || 0,
+                          negative: issue.negative || 0
+                        })) || null}
+                        loading={issuesLoading}
+                        onDrillDown={!drillDownState.active ? handleIssueDrillDown : undefined}
+                      />
+                    </div>
+
+                    <div className="hidden">
                       <MentionsChart 
                         key={`mentions-${filters._forceUpdate || 'initial'}`}
                         mentionsData={mentions} 
                         loading={mentionsLoading} 
                         type="area"
                         onDrillDown={!drillDownState.active ? handleDateDrillDown : undefined}
+                        disabled={true}
                       />
                     </div>
 
