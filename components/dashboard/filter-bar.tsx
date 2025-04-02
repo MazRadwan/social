@@ -529,11 +529,11 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <div className="flex flex-wrap gap-1 overflow-x-auto max-w-[85%]">
+            <div className="flex flex-nowrap overflow-x-auto max-w-full pr-2">
               <Button
                 variant="date-tab"
                 size="sm"
-                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm rounded-l-md whitespace-nowrap"
+                className="py-1 px-1.5 sm:px-4 h-auto text-[10px] sm:text-xs whitespace-nowrap rounded-l-md flex-shrink-0"
                 data-state={isLastXDays(date, 30) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(30)}
               >
@@ -542,7 +542,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm whitespace-nowrap"
+                className="py-1 px-1.5 sm:px-4 h-auto text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0"
                 data-state={isLastXDays(date, 90) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(90)}
               >
@@ -551,7 +551,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm whitespace-nowrap"
+                className="py-1 px-1.5 sm:px-4 h-auto text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0"
                 data-state={isLastYear(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(365)}
               >
@@ -560,7 +560,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm rounded-r-md whitespace-nowrap"
+                className="py-1 px-1.5 sm:px-4 h-auto text-[10px] sm:text-xs whitespace-nowrap rounded-r-md flex-shrink-0"
                 data-state={isAllTime(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(null)}
               >
