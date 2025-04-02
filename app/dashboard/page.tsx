@@ -54,6 +54,7 @@ interface DrillDownState {
   active: boolean;
   type: 'source' | 'sentiment' | 'issue' | 'date' | null;
   value: string | null;
+  subValue?: 'positive' | 'negative' | null;
   previousFilters: FilterOptions | null;
 }
 
@@ -325,11 +326,11 @@ export default function DashboardPage() {
   };
 
   // Handle drill-down action for issue
-  const handleIssueDrillDown = (issue: string) => {
+  const handleIssueDrillDown = (issue: string, sentimentType?: 'positive' | 'negative') => {
     // Store current filters before replacing them
     const previousFilters = { ...filters };
     
-    // Create new filter focused just on the selected issue
+    // Create new filter focused on the selected issue
     const drillDownFilters: FilterOptions = {
       assigned_issue: issue,
       dateRange: filters.dateRange ? {
@@ -342,11 +343,17 @@ export default function DashboardPage() {
       _forceUpdate: Date.now()
     };
     
+    // If sentiment type is specified, add it to the filters
+    if (sentimentType) {
+      drillDownFilters.sentiment = sentimentType === 'positive' ? 'Positive' : 'Negative';
+    }
+    
     // Update drill-down state
     setDrillDownState({
       active: true,
       type: 'issue',
       value: issue,
+      subValue: sentimentType || null,
       previousFilters: previousFilters
     });
     
@@ -457,6 +464,7 @@ export default function DashboardPage() {
                 <DrillDownHeader
                   type={drillDownState.type}
                   value={drillDownState.value}
+                  subValue={drillDownState.subValue}
                   onExit={exitDrillDown}
                 />
               </div>
@@ -536,6 +544,8 @@ export default function DashboardPage() {
                         })) || null}
                         loading={issuesLoading}
                         onDrillDown={!drillDownState.active ? handleIssueDrillDown : undefined}
+                        isDrillDown={drillDownState.active && drillDownState.type === 'issue'}
+                        activeSentiment={drillDownState.subValue}
                       />
                     </div>
 

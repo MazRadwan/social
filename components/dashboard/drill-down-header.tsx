@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 interface DrillDownHeaderProps {
   type: 'source' | 'sentiment' | 'issue' | 'date' | null;
   value: string | null;
+  subValue?: 'positive' | 'negative' | null;
   onExit: () => void;
 }
 
-export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
-  // Determine color accent based on drill-down type
+export function DrillDownHeader({ type, value, subValue, onExit }: DrillDownHeaderProps) {
+  // Determine color accent based on drill-down type and subValue
   const getAccentClass = () => {
     switch (type) {
       case 'source':
@@ -19,6 +20,8 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
         return value === 'Positive' ? 'border-l-green-500' : 
                value === 'Negative' ? 'border-l-red-500' : 'border-l-yellow-500';
       case 'issue':
+        if (subValue === 'positive') return 'border-l-green-500';
+        if (subValue === 'negative') return 'border-l-red-500';
         return 'border-l-purple-500';
       case 'date':
         return 'border-l-indigo-500';
@@ -27,7 +30,7 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
     }
   };
 
-  // Get button background color based on drill-down type
+  // Get button background color based on drill-down type and subValue
   const getButtonClass = () => {
     switch (type) {
       case 'source':
@@ -40,6 +43,10 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
         else 
           return 'bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200';
       case 'issue':
+        if (subValue === 'positive')
+          return 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-800 dark:text-green-200';
+        else if (subValue === 'negative')
+          return 'bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-800 dark:text-red-200';
         return 'bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-800 dark:text-purple-200';
       case 'date':
         return 'bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200';
@@ -62,7 +69,11 @@ export function DrillDownHeader({ type, value, onExit }: DrillDownHeaderProps) {
       <div className="text-xl font-bold ml-2">
         {type === 'source' && `Source: ${value}`}
         {type === 'sentiment' && `Sentiment: ${value}`}
-        {type === 'issue' && `Issue: ${value}`}
+        {type === 'issue' && (
+          <>
+            Issue: {value}
+          </>
+        )}
         {type === 'date' && `Date: ${value}`}
       </div>
     </div>

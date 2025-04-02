@@ -22,13 +22,17 @@ interface IssuesChartProps {
     negative: number
   }[] | null
   loading: boolean
-  onDrillDown?: (issue: string) => void
+  onDrillDown?: (issue: string, sentimentType: 'positive' | 'negative') => void
+  isDrillDown?: boolean
+  activeSentiment?: 'positive' | 'negative' | null
 }
 
 export function IssuesChart({
   issuesData,
   loading,
   onDrillDown,
+  isDrillDown = false,
+  activeSentiment = null
 }: IssuesChartProps) {
   // Track hovering state
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -62,6 +66,16 @@ export function IssuesChart({
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Get the current sentiment type being hovered
+      // Make sure we get the dataKey from the correct payload entry
+      let sentimentType: 'positive' | 'negative' = 'positive';
+      
+      // Find which bar/sentiment we're actually hovering over
+      const hoveredPayload = payload.find((p: any) => p.dataKey === (activeBar || 'positive'));
+      if (hoveredPayload) {
+        sentimentType = hoveredPayload.dataKey as 'positive' | 'negative';
+      }
+      
       return (
         <div className="bg-background/95 dark:bg-gray-900/95 border border-border dark:border-gray-700 rounded-md shadow-md p-3 text-sm backdrop-blur-sm">
           <p className="font-medium mb-1">{label}</p>
@@ -76,9 +90,9 @@ export function IssuesChart({
               </p>
             )
           })}
-          {onDrillDown && (
+          {onDrillDown && !isDrillDown && (
             <p className="text-xs text-muted-foreground mt-2 italic">
-              Click to view details
+              Click to view {sentimentType === 'positive' ? 'positive' : 'negative'} sentiment for this issue
             </p>
           )}
         </div>
@@ -87,18 +101,54 @@ export function IssuesChart({
     return null
   }
 
-  // Handle click for drill-down
+  // Handle click for drill-down - update to pass sentiment type
   const handleClick = (data: any) => {
-    if (onDrillDown && data && data.activeLabel) {
-      onDrillDown(data.activeLabel)
+    if (onDrillDown && data && data.activePayload && data.activePayload.length) {
+      const issue = data.activePayload[0].payload.issue;
+      
+      // Determine if we clicked on positive or negative bar based on active hover state
+      // This is more reliable than using just the first payload item
+      let sentimentType: 'positive' | 'negative';
+      
+      if (activeBar) {
+        // If we have an active bar from hover, use that
+        sentimentType = activeBar;
+      } else {
+        // Fallback: try to determine from the payload
+        const positivePayload = data.activePayload.find((p: any) => p.dataKey === 'positive');
+        const negativePayload = data.activePayload.find((p: any) => p.dataKey === 'negative');
+        
+        // If both bars are present, use the one with the value being hovered
+        if (positivePayload && negativePayload) {
+          // Check which bar is at the current x-coordinate
+          sentimentType = Math.abs(data.chartX - positivePayload.x) < Math.abs(data.chartX - negativePayload.x) 
+            ? 'positive' 
+            : 'negative';
+        } else {
+          // If only one bar type is present, use that one
+          sentimentType = positivePayload ? 'positive' : 'negative';
+        }
+      }
+      
+      onDrillDown(issue, sentimentType);
     }
   }
 
   return (
     <Card className="col-span-1">
       <CardHeader>
-        <CardTitle>Sentiment Comparison Across Key Issues</CardTitle>
-        <CardDescription>Distribution of positive and negative sentiment by issue</CardDescription>
+        <CardTitle>
+          {isDrillDown 
+            ? `${activeSentiment === 'positive' ? 'Positive' : 'Negative'} Sentiment by Issue` 
+            : 'Sentiment Comparison Across Key Issues'
+          }
+        </CardTitle>
+        <CardDescription>
+          {isDrillDown
+            ? `Showing only ${activeSentiment === 'positive' ? 'positive' : 'negative'} sentiment counts`
+            : 'Distribution of positive and negative sentiment by issue'
+          }
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -123,6 +173,7 @@ export function IssuesChart({
                 <XAxis 
                   type="number" 
                   tickFormatter={(value) => Math.abs(value).toString()}
+                  domain={isDrillDown ? [0, 'auto'] : ['dataMin', 'dataMax']}
                 />
                 <YAxis
                   dataKey="issue"
@@ -140,53 +191,75 @@ export function IssuesChart({
                   }}
                 />
                 <ReferenceLine x={0} stroke="#666" />
-                <Bar
-                  dataKey="positive"
-                  name="Positive"
-                  onMouseOver={(data, index) => {
-                    setActiveIndex(index);
-                    setActiveBar('positive');
-                  }}
-                  animationDuration={800}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`positive-${index}`}
-                      fill={activeIndex === index && activeBar === 'positive' 
-                        ? colors.positive.hover 
-                        : colors.positive.default}
-                    />
-                  ))}
-                </Bar>
-                <Bar
-                  dataKey="negative"
-                  name="Negative"
-                  onMouseOver={(data, index) => {
-                    setActiveIndex(index);
-                    setActiveBar('negative');
-                  }}
-                  animationDuration={800}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`negative-${index}`}
-                      fill={activeIndex === index && activeBar === 'negative' 
-                        ? colors.negative.hover 
-                        : colors.negative.default}
-                    />
-                  ))}
-                </Bar>
+                {/* Only render positive bar if not in drill-down or if positive is the active sentiment */}
+                {(!isDrillDown || activeSentiment === 'positive') && (
+                  <Bar
+                    dataKey="positive"
+                    name="Positive"
+                    onMouseOver={(data, index) => {
+                      setActiveIndex(index);
+                      setActiveBar('positive');
+                    }}
+                    onMouseLeave={() => {
+                      if (activeBar === 'positive') {
+                        setActiveBar(null);
+                        setActiveIndex(null);
+                      }
+                    }}
+                    animationDuration={800}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`positive-${index}`}
+                        fill={activeIndex === index && activeBar === 'positive' 
+                          ? colors.positive.hover 
+                          : colors.positive.default}
+                      />
+                    ))}
+                  </Bar>
+                )}
+                {/* Only render negative bar if not in drill-down or if negative is the active sentiment */}
+                {(!isDrillDown || activeSentiment === 'negative') && (
+                  <Bar
+                    dataKey="negative"
+                    name="Negative"
+                    onMouseOver={(data, index) => {
+                      setActiveIndex(index);
+                      setActiveBar('negative');
+                    }}
+                    onMouseLeave={() => {
+                      if (activeBar === 'negative') {
+                        setActiveBar(null);
+                        setActiveIndex(null);
+                      }
+                    }}
+                    animationDuration={800}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`negative-${index}`}
+                        fill={activeIndex === index && activeBar === 'negative' 
+                          ? colors.negative.hover 
+                          : colors.negative.default}
+                      />
+                    ))}
+                  </Bar>
+                )}
               </BarChart>
             </ResponsiveContainer>
             <div className="flex items-center justify-center gap-4 mt-2">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-sm">Positive</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                <span className="text-sm">Negative</span>
-              </div>
+              {(!isDrillDown || activeSentiment === 'positive') && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-sm">Positive</span>
+                </div>
+              )}
+              {(!isDrillDown || activeSentiment === 'negative') && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                  <span className="text-sm">Negative</span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
