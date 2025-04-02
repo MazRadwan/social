@@ -28,8 +28,8 @@ export function ArticlesTable({
 }: ArticlesTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
-  const [sortColumn, setSortColumn] = useState<SortColumn>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+  const [sortColumn, setSortColumn] = useState<SortColumn>('date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   
   // Toggle row expansion
   const toggleRowExpansion = (index: number) => {
