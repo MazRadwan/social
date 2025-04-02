@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: 'Social-Listening',
   description: 'Created by Beam WIL Gigachads',
   generator: 'Maz Radwan',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+    shortcut: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -15,6 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
       <body>
         <ThemeProvider
           attribute="class"
