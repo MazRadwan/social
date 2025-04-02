@@ -514,7 +514,7 @@ export default function DashboardPage() {
                       />
                     )}
 
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 mx-auto w-full">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 mx-auto w-full overflow-hidden">
                       <MetricsOverview 
                         totalMentions={sentimentSummary.total || 0} 
                         positiveMentions={sentimentSummary.positive || 0}
@@ -528,7 +528,7 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 overflow-hidden">
                       <SentimentTrendChart 
                         key={`sentiment-trend-${filters._forceUpdate || 'initial'}`}
                         sentimentData={sentimentData} 

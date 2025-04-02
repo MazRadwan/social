@@ -529,11 +529,11 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
       <div className="bg-card border rounded-lg p-3 sm:p-4 w-full">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <div className="flex flex-wrap gap-0">
+            <div className="flex flex-wrap gap-1 overflow-x-auto max-w-[85%]">
               <Button
                 variant="date-tab"
                 size="sm"
-                className="flex-1 py-2 px-4 h-auto rounded-l-md"
+                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm rounded-l-md whitespace-nowrap"
                 data-state={isLastXDays(date, 30) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(30)}
               >
@@ -542,7 +542,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="flex-1 py-2 px-4 h-auto"
+                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm whitespace-nowrap"
                 data-state={isLastXDays(date, 90) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(90)}
               >
@@ -551,7 +551,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="flex-1 py-2 px-4 h-auto"
+                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm whitespace-nowrap"
                 data-state={isLastYear(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(365)}
               >
@@ -560,7 +560,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               <Button
                 variant="date-tab"
                 size="sm"
-                className="flex-1 py-2 px-4 h-auto rounded-r-md"
+                className="py-2 px-2 sm:px-4 h-auto text-xs sm:text-sm rounded-r-md whitespace-nowrap"
                 data-state={isAllTime(date) ? "active" : "inactive"}
                 onClick={() => handleQuickDateSelect(null)}
               >
@@ -572,6 +572,7 @@ export function FilterBar({ onFilterChange, availableSources, initialFilters }: 
               size="icon"
               onClick={() => setIsExpanded(!isExpanded)}
               aria-label={isExpanded ? "Collapse filters" : "Expand filters"}
+              className="ml-auto flex-shrink-0"
             >
               <ChevronDown
                 className={cn("h-4 w-4 transition-transform", {

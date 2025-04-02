@@ -156,7 +156,7 @@ export function Header({ activeTab, onSearchChange, initialFilters, isDrillDown 
 
   return (
     <div className={`sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${isDrillDown ? 'shadow-none dark:shadow-md' : 'shadow-md'} dark:border-border`}>
-      <div className="flex h-14 items-center gap-4 px-6">
+      <div className="flex h-14 items-center gap-4 px-2 sm:px-6">
         <SidebarTrigger />
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-semibold">
@@ -168,10 +168,10 @@ export function Header({ activeTab, onSearchChange, initialFilters, isDrillDown 
           </h1>
         </div>
         
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
           {/* Search bar */}
           {onSearchChange && (
-            <div className="relative w-64">
+            <div className="relative w-full max-w-[180px] sm:max-w-[240px]">
               <Input
                 type="text"
                 placeholder="Search for content..."
@@ -183,7 +183,7 @@ export function Header({ activeTab, onSearchChange, initialFilters, isDrillDown 
             </div>
           )}
           <ThemeToggle />
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <Button variant="outline" size="sm">
               <Save className="mr-2 h-3.5 w-3.5" />
               Save View

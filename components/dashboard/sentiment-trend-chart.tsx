@@ -48,6 +48,9 @@ export function SentimentTrendChart({
     score: true,
   })
 
+  // Use mobile hooks for responsive design
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+
   // Format the data for the chart
   const chartData = useMemo(() => {
     if (!sentimentData) return []
@@ -123,7 +126,9 @@ export function SentimentTrendChart({
             <ResponsiveContainer width="100%" height="100%">
               <LineChart 
                 data={chartData} 
-                margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                margin={isMobile ? 
+                  { top: 5, right: 10, left: 0, bottom: 5 } : 
+                  { top: 5, right: 20, left: 5, bottom: 5 }}
                 onClick={onDrillDown ? handleDataPointClick : undefined}
                 style={{ cursor: onDrillDown ? 'pointer' : 'default' }}
               >
@@ -132,15 +137,17 @@ export function SentimentTrendChart({
                   dataKey="date"
                   tickFormatter={(date) => format(parseISO(date), 'MMM dd')}
                   tick={{ fontSize: 11 }}
-                  minTickGap={15}
+                  minTickGap={isMobile ? 30 : 15}
                   padding={{ left: 0, right: 0 }}
+                  interval={isMobile ? 'preserveStartEnd' : 0}
                 />
                 <YAxis
                   yAxisId="left"
                   allowDecimals={false}
                   tick={{ fontSize: 11 }}
                   domain={[0, 'auto']}
-                  width={25}
+                  width={isMobile ? 20 : 25}
+                  tickCount={isMobile ? 4 : undefined}
                 />
                 <YAxis
                   yAxisId="right"
@@ -148,7 +155,8 @@ export function SentimentTrendChart({
                   domain={[-1, 1]}
                   tickFormatter={(value) => value.toFixed(1)}
                   tick={{ fontSize: 11 }}
-                  width={25}
+                  width={isMobile ? 20 : 25}
+                  tickCount={isMobile ? 3 : 5}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend 
