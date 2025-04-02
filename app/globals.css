@@ -132,4 +132,24 @@ body {
       @apply mx-auto;
     }
   }
+  
+  /* Fix for table and card overflow issues */
+  .card {
+    @apply overflow-hidden;
+  }
+  
+  table {
+    @apply w-full table-fixed;
+    min-width: 100%;
+  }
+  
+  .table-container {
+    @apply w-full overflow-x-auto;
+  }
+  
+  /* Ensure cells in tables don't force overflow */
+  td, th {
+    @apply break-words;
+    max-width: 100%;
+  }
 }
