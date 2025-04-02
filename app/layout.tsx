@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
     shortcut: '/favicon.ico',
   },
+  viewport: 'width=device-width, initial-scale=1',
 }
 
 export default function RootLayout({

@@ -388,7 +388,7 @@ export default function DashboardPage() {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background dark:bg-[#050614]">
+        <div className="flex min-h-screen w-full max-w-[100vw] bg-background dark:bg-[#050614]">
           <Sidebar>
             <SidebarHeader className="flex h-14 items-center border-b px-4 md:px-6">
               <div className="flex items-center gap-2 font-semibold pt-4">
@@ -471,7 +471,7 @@ export default function DashboardPage() {
             )}
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
-              <main className="p-4 sm:p-5 md:p-7 relative w-full">
+              <main className="p-4 sm:p-5 md:p-7 relative w-full overflow-x-hidden">
                 {/* Dashboard Tooltips */}
                 {showTooltips && (
                   <>
