@@ -11,11 +11,6 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
     shortcut: '/favicon.ico',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
 }
 
 export default function RootLayout({
@@ -28,7 +23,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className="overflow-x-hidden">
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

@@ -471,7 +471,7 @@ export default function DashboardPage() {
             )}
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
-              <main className="p-4 sm:p-5 md:p-7 relative w-full max-w-[100vw] overflow-x-hidden">
+              <main className="p-4 sm:p-5 md:p-7 relative w-full">
                 {/* Dashboard Tooltips */}
                 {showTooltips && (
                   <>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
                       />
                     )}
 
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 w-full">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1">
                       <MetricsOverview 
                         totalMentions={sentimentSummary.total || 0} 
                         positiveMentions={sentimentSummary.positive || 0}
@@ -592,7 +592,7 @@ export default function DashboardPage() {
 
                 {/* All Data Tab */}
                 {activeTab === "all-data" && (
-                  <div className="grid gap-6 w-full">
+                  <div className="grid gap-6">
                       <div>
                         <h2 className="text-2xl font-bold tracking-tight">All Data</h2>
                         <p className="text-muted-foreground">View and filter all mentions across platforms</p>
