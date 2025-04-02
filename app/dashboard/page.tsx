@@ -471,7 +471,7 @@ export default function DashboardPage() {
             )}
             
             <div className="flex-1 overflow-auto h-[calc(100vh-3.5rem)]">
-              <main className="p-4 sm:p-5 md:p-7 relative w-full overflow-x-hidden">
+              <main className="px-2 sm:px-5 md:px-7 py-4 relative w-full overflow-x-hidden max-w-full">
                 {/* Dashboard Tooltips */}
                 {showTooltips && (
                   <>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
                       />
                     )}
 
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 mx-auto w-full">
                       <MetricsOverview 
                         totalMentions={sentimentSummary.total || 0} 
                         positiveMentions={sentimentSummary.positive || 0}

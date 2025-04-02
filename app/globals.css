@@ -118,4 +118,18 @@ body {
   .dark .chart-grid path {
     stroke: rgba(255, 255, 255, 0.1);
   }
+
+  .card-header {
+    @apply px-4 sm:px-6;
+  }
+  
+  .card-content {
+    @apply px-4 sm:px-6;
+  }
+  
+  @media (max-width: 640px) {
+    .card {
+      @apply mx-auto;
+    }
+  }
 }
